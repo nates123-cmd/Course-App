@@ -40,7 +40,7 @@ create table course_tasks (
   project_id uuid references course_projects(id) on delete cascade,
   title text not null,
   status text not null default 'next'
-    check (status in ('triage','next','in_progress','waiting','done','dropped')),
+    check (status in ('triage','next','in_progress','waiting','done','dropped','pushed')),
   do_date date,
   completed_date date,
   effort text check (effort in ('15m','30m','1h','2h+')),

@@ -3234,7 +3234,7 @@
   const PROJECT_STATUS_OPTIONS = ['active', 'idea', 'paused', 'routine', 'under_review', 'done', 'archived'];
   const TASK_STATUS_TO_NOTION = {
     triage: 'Triage', next: 'Next', in_progress: 'In Progress',
-    waiting: 'Waiting', done: 'Done', dropped: 'Dropped',
+    waiting: 'Waiting', done: 'Done', dropped: 'Dropped', pushed: 'Pushed',
   };
   async function writebackProjectStatus(notionUrl, status) {
     const pageId = extractNotionPageId(notionUrl);
@@ -8426,7 +8426,7 @@ Output strict JSON array (no surrounding prose, no code fences):
   }
 
   // — Task Sheet (bottom-sheet editor) —
-  const TASK_STATUS_OPTIONS = ['triage', 'next', 'in_progress', 'waiting', 'done', 'dropped'];
+  const TASK_STATUS_OPTIONS = ['triage', 'next', 'in_progress', 'waiting', 'pushed', 'done', 'dropped'];
 
   function findTaskById(id) {
     if (state.detail && Array.isArray(state.detail.tasks)) {
@@ -8588,7 +8588,12 @@ Output strict JSON array (no surrounding prose, no code fences):
         <div class="meta-label">Reminders</div>
         ${task.reminders_uuid
           ? `<div class="task-sheet-hint" style="margin-bottom: var(--sp-8); color: var(--good);">✓ Sent to Reminders.</div>
-             <button class="nav-btn" id="task-sheet-send-reminders">Re-send</button>`
+             <div style="display: flex; gap: var(--sp-8);">
+               <button class="nav-btn" id="task-sheet-send-reminders">Re-send</button>
+               ${task.status === 'pushed'
+                 ? `<button class="nav-btn" disabled style="color: var(--good);">✓ Pushed</button>`
+                 : `<button class="nav-btn" id="task-sheet-mark-pushed">Mark Pushed</button>`}
+             </div>`
           : `<button class="nav-btn" id="task-sheet-send-reminders">Send to Reminders</button>
              <div class="task-sheet-hint" style="margin-top: var(--sp-6);">Opens the <b>CourseAddReminder</b> Shortcut on iOS. See Settings → Reminders sync for setup.</div>`}
       </div>
@@ -10011,6 +10016,10 @@ Content-Type: application/json
     }
     if (e.target.closest('#task-sheet-send-reminders')) {
       sendTaskToReminders(state.taskSheet.taskId);
+      return;
+    }
+    if (e.target.closest('#task-sheet-mark-pushed')) {
+      saveTaskStatusFromSheet('pushed');
       return;
     }
   });
