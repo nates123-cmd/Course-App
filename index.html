@@ -3020,6 +3020,13 @@
   <div id="settings-sheet-body"></div>
 </div>
 
+<div class="task-sheet-backdrop" id="import-sheet-backdrop"></div>
+<div class="task-sheet" id="import-sheet" role="dialog" aria-modal="true">
+  <div class="task-sheet-handle"></div>
+  <button class="task-sheet-close" id="import-sheet-close" aria-label="Close">✕</button>
+  <div id="import-sheet-body"></div>
+</div>
+
 <script src="./dev-config.js" onerror="void 0"></script>
 <script>
   // — Supabase config (shared project with Break / Tick / Still / Tide) —
@@ -3226,6 +3233,18 @@
       weekOf: null,
     },
     stallDismissals: {}, // project_id → ISO timestamp of most recent dismissal
+    import: {
+      open: false,
+      url: '',
+      pageId: null,
+      fetching: false,
+      page: null,
+      detectedType: null,
+      chosenType: null,
+      existing: null,
+      importing: false,
+      error: null,
+    },
     fridayClose: {
       loading: false,
       weekOf: null,
@@ -8517,6 +8536,11 @@ Output strict JSON array (no surrounding prose, no code fences):
         </div>
       </div>
       <div class="task-sheet-section">
+        <div class="meta-label">Notion</div>
+        <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Pull in a single Notion page (Project / Goal / Task) by URL. The rest of your Notion stays untouched.</div>
+        <button class="nav-btn" id="settings-import-notion">Import a Notion page</button>
+      </div>
+      <div class="task-sheet-section">
         <div class="meta-label">Setup</div>
         <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Already imported from Notion. Re-run only if you want to start from a fresh import (Course data stays in Supabase regardless).</div>
         <button class="nav-btn" id="settings-rerun-setup">Re-run setup flow</button>
@@ -8543,6 +8567,10 @@ Output strict JSON array (no surrounding prose, no code fences):
       closeSettingsSheet();
       location.reload();
     }
+    if (e.target.id === 'settings-import-notion') {
+      closeSettingsSheet();
+      openImportSheet();
+    }
   });
   document.getElementById('settings-sheet').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'settings-api-key') {
@@ -8551,6 +8579,298 @@ Output strict JSON array (no surrounding prose, no code fences):
       if (!val) return;
       localStorage.setItem('anthropic_api_key', val);
       closeSettingsSheet();
+    }
+  });
+
+  // — Selective Notion import (paste a URL → preview → confirm) —
+  function parseNotionPageId(url) {
+    if (!url) return null;
+    let m = url.match(/([0-9a-f]{32})(?![0-9a-f])/i);
+    if (m) return m[1].toLowerCase();
+    m = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (m) return m[1].replace(/-/g, '').toLowerCase();
+    return null;
+  }
+
+  function openImportSheet() {
+    state.import = {
+      open: true, url: '', pageId: null, fetching: false, page: null,
+      detectedType: null, chosenType: null, existing: null,
+      importing: false, error: null,
+    };
+    renderImportSheet();
+    document.getElementById('import-sheet').classList.add('open');
+    document.getElementById('import-sheet-backdrop').classList.add('open');
+    setTimeout(() => {
+      const i = document.getElementById('import-url-input');
+      if (i) i.focus();
+    }, 280);
+  }
+  function closeImportSheet() {
+    state.import.open = false;
+    document.getElementById('import-sheet').classList.remove('open');
+    document.getElementById('import-sheet-backdrop').classList.remove('open');
+  }
+
+  async function fetchAndPreviewNotionPage() {
+    const imp = state.import;
+    const url = (document.getElementById('import-url-input') || {}).value || imp.url;
+    imp.url = url;
+    const pageId = parseNotionPageId(url);
+    if (!pageId) {
+      imp.error = "Couldn't read a Notion page ID from that URL.";
+      renderImportSheet();
+      return;
+    }
+    imp.pageId = pageId;
+    imp.fetching = true;
+    imp.error = null;
+    imp.page = null;
+    imp.detectedType = null;
+    imp.chosenType = null;
+    imp.existing = null;
+    renderImportSheet();
+    try {
+      // Ensure DB IDs are cached so we can detect type
+      const dbs = state.setup.connection.dbs || {};
+      if (!dbs.projects || !dbs.goals) {
+        const search = await efFetch('search_databases');
+        const matched = matchDatabases(search.results || []);
+        state.setup.connection = state.setup.connection || {};
+        state.setup.connection.dbs = matched;
+        saveSetupState();
+      }
+      const page = await efFetch('fetch_page', { page_id: pageId });
+      imp.page = page;
+      // Detect type by parent DB
+      const matchedDbs = state.setup.connection.dbs || {};
+      const parentDbId = page.parent && page.parent.type === 'database_id' ? page.parent.database_id : null;
+      if (parentDbId) {
+        if (matchedDbs.projects && matchedDbs.projects.id.replace(/-/g, '') === parentDbId.replace(/-/g, '')) {
+          imp.detectedType = 'project';
+        } else if (matchedDbs.goals && matchedDbs.goals.id.replace(/-/g, '') === parentDbId.replace(/-/g, '')) {
+          imp.detectedType = 'goal';
+        } else if (matchedDbs.tasks && matchedDbs.tasks.id.replace(/-/g, '') === parentDbId.replace(/-/g, '')) {
+          imp.detectedType = 'task';
+        }
+      }
+      imp.chosenType = imp.detectedType || 'project';
+      // Check if already imported (by notion_url substring match)
+      try {
+        const candidates = await Promise.all([
+          sbFetch(`/course_projects?notion_url=like.*${pageId}*&select=id,name&limit=1`),
+          sbFetch(`/course_goals?notion_url=like.*${pageId}*&select=id,name&limit=1`),
+          sbFetch(`/course_tasks?notion_url=like.*${pageId}*&select=id,title&limit=1`),
+        ]);
+        const labels = ['project', 'goal', 'task'];
+        candidates.forEach((rows, i) => {
+          if (rows && rows.length && !imp.existing) {
+            imp.existing = { type: labels[i], id: rows[0].id, name: rows[0].name || rows[0].title };
+          }
+        });
+      } catch (e) { /* non-fatal */ }
+    } catch (err) {
+      imp.error = err.message || String(err);
+    } finally {
+      imp.fetching = false;
+      renderImportSheet();
+    }
+  }
+
+  function importPreviewFields(type, page) {
+    const props = (page && page.properties) || {};
+    const fields = [];
+    const name = page ? getPageTitle(page) : '';
+    fields.push({ label: 'Name', value: name || '(untitled)' });
+    if (type === 'project') {
+      const status = (props.Status && props.Status.select && props.Status.select.name) || null;
+      const outcome = (props.Outcome && props.Outcome.type === 'rich_text')
+        ? (props.Outcome.rich_text || []).map(t => t.plain_text).join('')
+        : '';
+      const due = (props.Due && props.Due.date && props.Due.date.start) || null;
+      if (status) fields.push({ label: 'Status', value: status });
+      if (outcome) fields.push({ label: 'Definition of Done', value: outcome.length > 160 ? outcome.slice(0, 160) + '…' : outcome });
+      if (due) fields.push({ label: 'Due', value: due });
+    } else if (type === 'goal') {
+      const description = (props.Description && props.Description.type === 'rich_text')
+        ? (props.Description.rich_text || []).map(t => t.plain_text).join('')
+        : '';
+      if (description) fields.push({ label: 'Description', value: description.length > 160 ? description.slice(0, 160) + '…' : description });
+    } else if (type === 'task') {
+      const status = (props['Task Status'] && props['Task Status'].select && props['Task Status'].select.name) || null;
+      const due = (props['Do date'] && props['Do date'].date && props['Do date'].date.start) || null;
+      if (status) fields.push({ label: 'Status', value: status });
+      if (due) fields.push({ label: 'Do date', value: due });
+    }
+    return fields;
+  }
+
+  async function commitImport() {
+    const imp = state.import;
+    if (imp.importing) return;
+    if (!imp.page || !imp.chosenType) return;
+    imp.importing = true;
+    imp.error = null;
+    renderImportSheet();
+    const props = imp.page.properties || {};
+    const name = getPageTitle(imp.page) || '(untitled)';
+    const notionUrl = imp.page.url || `https://www.notion.so/${imp.pageId}`;
+    try {
+      if (imp.chosenType === 'project') {
+        const statusMap = {
+          'Active': 'active', 'Idea': 'idea', 'Paused': 'paused',
+          'Routine': 'routine', 'Under Review': 'under_review', 'Done': 'done',
+        };
+        const statusName = (props.Status && props.Status.select && props.Status.select.name) || 'Idea';
+        const outcome = (props.Outcome && props.Outcome.type === 'rich_text')
+          ? (props.Outcome.rich_text || []).map(t => t.plain_text).join('') || null
+          : null;
+        const due = (props.Due && props.Due.date && props.Due.date.start) || null;
+        const row = {
+          name,
+          status: statusMap[statusName] || 'idea',
+          outcome,
+          due_date: due,
+          notion_url: notionUrl,
+        };
+        const inserted = await sbFetch('/course_projects', { method: 'POST', body: JSON.stringify(row) });
+        const newId = inserted && inserted[0] && inserted[0].id;
+        if (newId) {
+          state.projects.unshift(inserted[0]);
+          renderProjects();
+          renderStats();
+          renderPillarLegend();
+          closeImportSheet();
+          showToast(`Imported project: ${name}`, { durationMs: 3000 });
+          showView('project-detail', { projectId: newId });
+        }
+      } else if (imp.chosenType === 'goal') {
+        const description = (props.Description && props.Description.type === 'rich_text')
+          ? (props.Description.rich_text || []).map(t => t.plain_text).join('') || null
+          : null;
+        const row = { name, description, status: 'active', notion_url: notionUrl };
+        const inserted = await sbFetch('/course_goals', { method: 'POST', body: JSON.stringify(row) });
+        if (inserted && inserted[0]) state.goals.unshift(inserted[0]);
+        renderGoals();
+        closeImportSheet();
+        showToast(`Imported goal: ${name}`, { durationMs: 3000 });
+      } else if (imp.chosenType === 'task') {
+        const taskStatusMap = {
+          'In Progress': 'in_progress', 'Next': 'next', 'Waiting': 'waiting',
+          'Triage': 'triage', 'Done': 'done', 'Dropped': 'dropped',
+        };
+        const statusName = (props['Task Status'] && props['Task Status'].select && props['Task Status'].select.name) || 'Next';
+        const due = (props['Do date'] && props['Do date'].date && props['Do date'].date.start) || null;
+        const row = {
+          title: name,
+          status: taskStatusMap[statusName] || 'next',
+          do_date: due,
+          notion_url: notionUrl,
+        };
+        const inserted = await sbFetch('/course_tasks', { method: 'POST', body: JSON.stringify(row) });
+        if (inserted && inserted[0] && state.tasksMode.tasks) {
+          state.tasksMode.tasks.unshift(inserted[0]);
+        }
+        closeImportSheet();
+        showToast(`Imported task: ${name}`, { durationMs: 3000 });
+      }
+    } catch (err) {
+      imp.error = err.message || String(err);
+      imp.importing = false;
+      renderImportSheet();
+    }
+  }
+
+  function renderImportSheet() {
+    const imp = state.import;
+    const body = document.getElementById('import-sheet-body');
+    if (!body) return;
+
+    const inputBlock = `
+      <div class="task-sheet-section">
+        <div class="meta-label">Notion page URL</div>
+        <input type="text" id="import-url-input" class="task-sheet-input"
+               placeholder="https://www.notion.so/..."
+               value="${escapeHtml(imp.url || '')}" autocomplete="off" />
+        <div style="display: flex; gap: var(--sp-8); margin-top: var(--sp-12);">
+          <button class="nav-btn primary" id="import-fetch-btn" ${imp.fetching ? 'disabled' : ''}>
+            ${imp.fetching ? 'Fetching…' : 'Fetch page'}
+          </button>
+        </div>
+      </div>
+    `;
+
+    let previewBlock = '';
+    if (imp.error) {
+      previewBlock = `<div class="task-sheet-section"><div class="task-sheet-notes" style="color: var(--risk);">${escapeHtml(imp.error)}</div></div>`;
+    } else if (imp.page) {
+      const fields = importPreviewFields(imp.chosenType, imp.page);
+      const typePicker = `
+        <div class="task-sheet-section">
+          <div class="meta-label">Type</div>
+          <div class="chip-row">
+            ${['project', 'goal', 'task'].map(t => `
+              <button class="chip ${imp.chosenType === t ? 'selected' : ''}" data-import-type="${t}">${t[0].toUpperCase() + t.slice(1)}</button>
+            `).join('')}
+          </div>
+          ${imp.detectedType ? `<div class="task-sheet-hint" style="margin-top: var(--sp-6);">Detected from parent database: <b>${imp.detectedType}</b>.</div>` : `<div class="task-sheet-hint" style="margin-top: var(--sp-6);">Couldn't auto-detect — pick one.</div>`}
+        </div>
+      `;
+      const fieldRows = fields.map(f => `
+        <div style="margin-bottom: var(--sp-8);">
+          <div style="font-size: var(--fs-10); letter-spacing: var(--tr-wide-3); color: var(--text-faint); text-transform: uppercase; font-weight: 600; margin-bottom: var(--sp-2);">${escapeHtml(f.label)}</div>
+          <div style="font-size: var(--fs-13); color: var(--text); line-height: 1.4;">${escapeHtml(f.value)}</div>
+        </div>
+      `).join('');
+      const existingWarn = imp.existing
+        ? `<div class="task-sheet-section"><div class="task-sheet-notes" style="color: var(--risk); font-weight: 600;">⚠ Already imported as a ${imp.existing.type}: ${escapeHtml(imp.existing.name || '')}. Importing again will create a duplicate.</div></div>`
+        : '';
+      previewBlock = `
+        ${typePicker}
+        <div class="task-sheet-section">
+          <div class="meta-label">Preview</div>
+          ${fieldRows}
+        </div>
+        ${existingWarn}
+        <div style="display: flex; gap: var(--sp-8);">
+          <button class="nav-btn primary" id="import-commit-btn" ${imp.importing ? 'disabled' : ''}>
+            ${imp.importing ? 'Importing…' : `Import as ${imp.chosenType}`}
+          </button>
+          <button class="nav-btn" id="import-cancel-btn">Cancel</button>
+        </div>
+      `;
+    }
+
+    body.innerHTML = `
+      <div class="task-sheet-section">
+        <div class="task-sheet-title">Import a Notion page</div>
+        <div class="task-sheet-hint" style="margin-top: var(--sp-4);">Paste a Notion URL. Course will read it and let you preview before importing.</div>
+      </div>
+      ${inputBlock}
+      ${previewBlock}
+    `;
+  }
+
+  document.getElementById('import-sheet-close').addEventListener('click', closeImportSheet);
+  document.getElementById('import-sheet-backdrop').addEventListener('click', closeImportSheet);
+  document.getElementById('import-sheet').addEventListener('click', (e) => {
+    if (e.target.id === 'import-fetch-btn') { fetchAndPreviewNotionPage(); return; }
+    if (e.target.id === 'import-commit-btn') { commitImport(); return; }
+    if (e.target.id === 'import-cancel-btn') { closeImportSheet(); return; }
+    const typeBtn = e.target.closest('[data-import-type]');
+    if (typeBtn) {
+      state.import.chosenType = typeBtn.dataset.importType;
+      renderImportSheet();
+      return;
+    }
+  });
+  document.getElementById('import-sheet').addEventListener('input', (e) => {
+    if (e.target.id === 'import-url-input') state.import.url = e.target.value;
+  });
+  document.getElementById('import-sheet').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'import-url-input') {
+      e.preventDefault();
+      fetchAndPreviewNotionPage();
     }
   });
 
