@@ -1,0 +1,25 @@
+{
+  "name": "Course",
+  "short_name": "Course",
+  "description": "Project execution cockpit — what's active, what's next, what's slipping.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1c1814",
+  "theme_color": "#d49355",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%231c1814'/><circle cx='96' cy='96' r='52' fill='none' stroke='%23d49355' stroke-width='8'/><circle cx='96' cy='96' r='8' fill='%23d49355'/><line x1='96' y1='96' x2='132' y2='66' stroke='%23d49355' stroke-width='6' stroke-linecap='round'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='102' fill='%231c1814'/><circle cx='256' cy='256' r='140' fill='none' stroke='%23d49355' stroke-width='22'/><circle cx='256' cy='256' r='22' fill='%23d49355'/><line x1='256' y1='256' x2='352' y2='176' stroke='%23d49355' stroke-width='16' stroke-linecap='round'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

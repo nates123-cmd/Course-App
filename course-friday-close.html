@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course — Friday Close</title>
+<style>
+  :root {
+    --bg: #1c1814;
+    --bg-elevated: #28221d;
+    --bg-nested: #322a23;
+    --border: #3a3128;
+    --text: #ede4d6;
+    --text-muted: #968878;
+    --text-faint: #5e5448;
+    --accent: #d49355;
+    --accent-dim: #8a6238;
+    --risk: #d4644a;
+    --good: #8aa365;
+
+    --pillar-arrow: #8aa3c4;
+    --pillar-sunny: #d4a86a;
+    --pillar-side: #b884c4;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5efe4;
+      --bg-elevated: #ebe3d3;
+      --bg-nested: #e0d7c4;
+      --border: #d0c4ad;
+      --text: #221c14;
+      --text-muted: #6e6354;
+      --text-faint: #9a8e7c;
+      --accent: #a86528;
+      --accent-dim: #c4885a;
+      --risk: #b8533c;
+      --good: #6b8550;
+
+      --pillar-arrow: #4a6388;
+      --pillar-sunny: #8a6228;
+      --pillar-side: #7a4a8a;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 22px 20px 100px;
+    max-width: 440px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  .step-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 26px;
+    font-weight: 500;
+  }
+
+  .step-meta .exit {
+    cursor: pointer;
+    color: var(--text-muted);
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  .flow-label {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .flow-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .flow-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 28px;
+  }
+
+  /* The week-in-review narrative */
+  .review-narrative {
+    background: var(--bg-elevated);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .narrative-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .narrative-text {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--text);
+    letter-spacing: -0.005em;
+  }
+
+  /* Stats grid */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .stat {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+  }
+
+  .stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-num.good { color: var(--good); }
+  .stat-num.risk { color: var(--risk); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* Movement section */
+  .section {
+    margin-bottom: 26px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+
+  .movement-item {
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pillar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pillar-dot.arrow { background: var(--pillar-arrow); }
+  .pillar-dot.sunny { background: var(--pillar-sunny); }
+  .pillar-dot.side { background: var(--pillar-side); }
+
+  .item-body { flex: 1; min-width: 0; }
+
+  .item-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+
+  .item-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .item-meta.good { color: var(--good); }
+  .item-meta.risk { color: var(--risk); }
+
+  /* Three closing questions */
+  .question-block {
+    margin-bottom: 22px;
+  }
+
+  .question-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  .question-text {
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: 12px;
+    letter-spacing: -0.005em;
+  }
+
+  .answer-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.45;
+    resize: none;
+    min-height: 76px;
+    outline: none;
+  }
+
+  .answer-input:focus { border-color: var(--accent-dim); }
+  .answer-input::placeholder { color: var(--text-faint); }
+
+  /* Push to Still option */
+  .push-still {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .push-still-check {
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    flex-shrink: 0;
+    background: var(--accent);
+    position: relative;
+  }
+
+  .push-still-check::after {
+    content: '✓';
+    position: absolute;
+    color: var(--bg);
+    font-size: 13px;
+    font-weight: 700;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .push-still-body { flex: 1; }
+
+  .push-still-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+
+  .push-still-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Close button */
+  .close-btn {
+    width: 100%;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="step-meta">
+    <span>Week 19 · May 5 – May 11</span>
+    <span class="exit">Save & exit</span>
+  </div>
+
+  <div class="flow-label">Friday Close</div>
+  <div class="flow-title">Close the week</div>
+  <div class="flow-sub">A read of what moved, what didn't, and what to carry forward.</div>
+
+  <!-- Claude's week-in-review narrative -->
+  <div class="review-narrative">
+    <div class="narrative-label">The Read</div>
+    <div class="narrative-text">Strong week on Morocco — three milestones moved, hiring on schedule. ECS slipped further than planned despite Monday's commitment. Zone 2 quiet again. UK trip prep ticked forward steadily without drama.</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num good">12</div>
+      <div class="stat-label">Tasks done</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">3</div>
+      <div class="stat-label">Pushed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num risk">2</div>
+      <div class="stat-label">Dropped</div>
+    </div>
+  </div>
+
+  <!-- What moved -->
+  <div class="section">
+    <div class="section-label">Moved</div>
+    <div class="movement-item">
+      <div class="pillar-dot arrow"></div>
+      <div class="item-body">
+        <div class="item-title">Morocco office expansion</div>
+        <div class="item-meta good">+12% · 3 milestones</div>
+      </div>
+    </div>
+    <div class="movement-item">
+      <div class="pillar-dot sunny"></div>
+      <div class="item-body">
+        <div class="item-title">UK trip prep</div>
+        <div class="item-meta good">+18%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What didn't -->
+  <div class="section">
+    <div class="section-label">Slipped</div>
+    <div class="movement-item">
+      <div class="pillar-dot arrow"></div>
+      <div class="item-body">
+        <div class="item-title">ECS presentation deck</div>
+        <div class="item-meta risk">+3% · planned +30%</div>
+      </div>
+    </div>
+    <div class="movement-item">
+      <div class="pillar-dot sunny"></div>
+      <div class="item-body">
+        <div class="item-title">Zone 2 cardio routine</div>
+        <div class="item-meta risk">No movement · stalled 9d</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three closing questions -->
+  <div class="question-block">
+    <div class="question-label">Question 1</div>
+    <div class="question-text">What to drop?</div>
+    <textarea class="answer-input" placeholder="Be honest — what's not yours this season…"></textarea>
+  </div>
+
+  <div class="question-block">
+    <div class="question-label">Question 2</div>
+    <div class="question-text">What to push forward?</div>
+    <textarea class="answer-input" placeholder="What carries into next week…"></textarea>
+  </div>
+
+  <div class="question-block">
+    <div class="question-label">Question 3</div>
+    <div class="question-text">What surprised you?</div>
+    <textarea class="answer-input" placeholder="A reflection — easier than expected, harder than expected, unexpected energy…"></textarea>
+  </div>
+
+  <!-- Push to Still -->
+  <div class="push-still">
+    <div class="push-still-check"></div>
+    <div class="push-still-body">
+      <div class="push-still-title">Save reflection to Still</div>
+      <div class="push-still-sub">Question 3 lands as a weekly entry</div>
+    </div>
+  </div>
+
+  <button class="close-btn">Close the week</button>
+
+</body>
+</html>

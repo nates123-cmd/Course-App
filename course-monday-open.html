@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course — Monday Open</title>
+<style>
+  :root {
+    --bg: #1c1814;
+    --bg-elevated: #28221d;
+    --bg-nested: #322a23;
+    --border: #3a3128;
+    --text: #ede4d6;
+    --text-muted: #968878;
+    --text-faint: #5e5448;
+    --accent: #d49355;
+    --accent-dim: #8a6238;
+    --risk: #d4644a;
+    --good: #8aa365;
+
+    --pillar-arrow: #8aa3c4;
+    --pillar-sunny: #d4a86a;
+    --pillar-side: #b884c4;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5efe4;
+      --bg-elevated: #ebe3d3;
+      --bg-nested: #e0d7c4;
+      --border: #d0c4ad;
+      --text: #221c14;
+      --text-muted: #6e6354;
+      --text-faint: #9a8e7c;
+      --accent: #a86528;
+      --accent-dim: #c4885a;
+      --risk: #b8533c;
+      --good: #6b8550;
+
+      --pillar-arrow: #4a6388;
+      --pillar-sunny: #8a6228;
+      --pillar-side: #7a4a8a;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 22px 20px 100px;
+    max-width: 440px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  /* Top progress bar */
+  .progress-bar {
+    height: 2px;
+    background: var(--bg-nested);
+    border-radius: 1px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 30%;
+    transition: width 0.3s ease;
+  }
+
+  /* Step header */
+  .step-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+    font-weight: 500;
+  }
+
+  .step-meta .exit {
+    cursor: pointer;
+    color: var(--text-muted);
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  /* Flow title */
+  .flow-label {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .flow-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .flow-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 26px;
+  }
+
+  /* Project card under review */
+  .project-card {
+    background: var(--bg-elevated);
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+    margin-bottom: 22px;
+  }
+
+  .project-lineage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .pillar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pillar-arrow);
+    display: inline-block;
+  }
+
+  .project-card-name {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+
+  .project-card-outcome {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    padding-top: 10px;
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .project-card-state {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .project-card-state b {
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .project-card-state b.risk { color: var(--risk); }
+
+  /* Question prompts */
+  .prompt-block {
+    margin-bottom: 22px;
+  }
+
+  .prompt-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  .prompt-question {
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: 14px;
+    letter-spacing: -0.005em;
+  }
+
+  /* Answer chips for the first question (status) */
+  .chip-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    flex: 1;
+    min-width: max-content;
+    transition: all 0.15s ease;
+  }
+
+  .chip:hover {
+    border-color: var(--accent-dim);
+  }
+
+  .chip.selected {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* Text input for next-move */
+  .next-move-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    line-height: 1.4;
+    resize: none;
+    min-height: 76px;
+    outline: none;
+  }
+
+  .next-move-input:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .next-move-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  /* Claude suggestion */
+  .suggestion-row {
+    background: var(--bg-elevated);
+    border-left: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .suggestion-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .suggestion-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.35;
+  }
+
+  .suggestion-use {
+    font-size: 11px;
+    color: var(--accent);
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+
+  /* When dropdown */
+  .when-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .when-chip {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+
+  .when-chip.selected {
+    background: var(--bg-nested);
+    color: var(--text);
+    border-color: var(--accent-dim);
+  }
+
+  /* Bottom actions */
+  .bottom-actions {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 440px;
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+    padding: 20px 20px 28px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .nav-btn {
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    border: none;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .nav-btn.primary {
+    background: var(--accent);
+    color: var(--bg);
+    flex: 1;
+  }
+</style>
+</head>
+<body>
+
+  <div class="progress-bar">
+    <div class="progress-fill"></div>
+  </div>
+
+  <div class="step-meta">
+    <span>Project 2 of 7</span>
+    <span class="exit">Save & exit</span>
+  </div>
+
+  <div class="flow-label">Monday Open</div>
+  <div class="flow-title">Set the week</div>
+  <div class="flow-sub">Walk through active projects. Three questions each. Skip what doesn't need a decision.</div>
+
+  <!-- Current project under review -->
+  <div class="project-card">
+    <div class="project-lineage">
+      <span class="pillar-dot"></span>
+      <span><b style="color: var(--text); font-weight: 600;">Arrow</b> · Comms</span>
+    </div>
+    <div class="project-card-name">ECS presentation deck</div>
+    <div class="project-card-state">
+      <span><b class="risk">Due Fri</b></span>
+      <span><b>22%</b> done</span>
+      <span><b class="risk">5d quiet</b></span>
+    </div>
+    <div class="project-card-outcome">Polished deck ready for executive review, Q1 metrics integrated.</div>
+  </div>
+
+  <!-- Q1: Still active -->
+  <div class="prompt-block">
+    <div class="prompt-label">Question 1</div>
+    <div class="prompt-question">Still active this week?</div>
+    <div class="chip-row">
+      <button class="chip selected">Yes</button>
+      <button class="chip">Push</button>
+      <button class="chip">Drop</button>
+    </div>
+  </div>
+
+  <!-- Q2: Next move -->
+  <div class="prompt-block">
+    <div class="prompt-label">Question 2</div>
+    <div class="prompt-question">What's the one next move?</div>
+
+    <div class="suggestion-row">
+      <div>
+        <div class="suggestion-label">Suggested</div>
+        <div class="suggestion-text">Pull Q1 metrics from Susie and draft executive summary slide</div>
+      </div>
+      <div class="suggestion-use">Use ›</div>
+    </div>
+
+    <textarea class="next-move-input" placeholder="Or write your own…">Pull Q1 metrics from Susie and draft executive summary slide</textarea>
+  </div>
+
+  <!-- Q3: When -->
+  <div class="prompt-block">
+    <div class="prompt-label">Question 3</div>
+    <div class="prompt-question">When this week?</div>
+    <div class="when-row">
+      <button class="when-chip selected">Today</button>
+      <button class="when-chip">Tue</button>
+      <button class="when-chip">Wed</button>
+      <button class="when-chip">Thu</button>
+      <button class="when-chip">Fri</button>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-actions">
+    <button class="nav-btn">‹ Back</button>
+    <button class="nav-btn primary">Next project ›</button>
+  </div>
+
+</body>
+</html>

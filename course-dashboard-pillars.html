@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course</title>
+<style>
+  :root {
+    --bg: #1c1814;
+    --bg-elevated: #28221d;
+    --bg-nested: #322a23;
+    --border: #3a3128;
+    --text: #ede4d6;
+    --text-muted: #968878;
+    --text-faint: #5e5448;
+    --accent: #d49355;
+    --accent-dim: #8a6238;
+    --risk: #d4644a;
+    --good: #8aa365;
+
+    /* Pillar colors — chosen to harmonize with the warm dark palette */
+    --pillar-arrow: #8aa3c4;       /* cool slate blue */
+    --pillar-sunny: #d4a86a;       /* warm gold (close to accent) */
+    --pillar-side: #b884c4;        /* muted plum */
+    --pillar-d: #7aa388;           /* sage */
+    --pillar-e: #c47878;           /* dusty rose */
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5efe4;
+      --bg-elevated: #ebe3d3;
+      --bg-nested: #e0d7c4;
+      --border: #d0c4ad;
+      --text: #221c14;
+      --text-muted: #6e6354;
+      --text-faint: #9a8e7c;
+      --accent: #a86528;
+      --accent-dim: #c4885a;
+      --risk: #b8533c;
+      --good: #6b8550;
+
+      --pillar-arrow: #4a6388;
+      --pillar-sunny: #8a6228;
+      --pillar-side: #7a4a8a;
+      --pillar-d: #4a7a5a;
+      --pillar-e: #8a4848;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 28px 20px 100px;
+    max-width: 440px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  .app-name {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .util {
+    display: flex;
+    gap: 14px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .util span { cursor: pointer; }
+
+  .date {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+  }
+
+  /* Goals strip */
+  .goals-strip {
+    margin-bottom: 20px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .goals-header {
+    padding: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .goals-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .goals-toggle {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .goals-toggle .chevron {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    font-size: 9px;
+  }
+
+  .goals-strip.collapsed .chevron { transform: rotate(-90deg); }
+
+  .goals-body {
+    max-height: 200px;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+    opacity: 1;
+    padding-bottom: 6px;
+  }
+
+  .goals-strip.collapsed .goals-body {
+    max-height: 0;
+    opacity: 0;
+    padding-bottom: 0;
+  }
+
+  .goals-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .goals-scroll::-webkit-scrollbar { display: none; }
+
+  .goal-chip {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 200px;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .goal-chip::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 2px;
+    border-radius: 0 1px 1px 0;
+    background: var(--text-faint);
+  }
+
+  .goal-chip.pillar-arrow::before { background: var(--pillar-arrow); }
+  .goal-chip.pillar-sunny::before { background: var(--pillar-sunny); }
+  .goal-chip.pillar-side::before { background: var(--pillar-side); }
+
+  .goal-chip-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: -0.005em;
+  }
+
+  .goal-chip-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .goal-progress {
+    flex: 1;
+    height: 2px;
+    background: var(--bg-nested);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .goal-progress-fill {
+    height: 100%;
+    background: var(--accent-dim);
+  }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex;
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    padding: 3px;
+    margin-bottom: 18px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 8px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 9px;
+    transition: all 0.15s ease;
+  }
+
+  .mode-btn.active {
+    background: var(--bg-nested);
+    color: var(--text);
+  }
+
+  /* Pulse */
+  .pulse-card {
+    background: var(--bg-elevated);
+    border-radius: 18px;
+    padding: 18px 18px 16px;
+    margin-bottom: 14px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .pulse-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .pulse-text {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .stat {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+
+  .stat-num {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-num.risk { color: var(--risk); }
+  .stat-num.good { color: var(--good); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    margin: 18px 4px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+  }
+
+  .section-action {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  /* Project row — now with Pillar dot */
+  .project {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 13px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+    position: relative;
+  }
+
+  .project:active { transform: scale(0.99); }
+
+  .project-row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+
+  /* Pillar dot — sits before the project name */
+  .pillar-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    transform: translateY(-1px);
+  }
+
+  .pillar-dot.arrow { background: var(--pillar-arrow); }
+  .pillar-dot.sunny { background: var(--pillar-sunny); }
+  .pillar-dot.side { background: var(--pillar-side); }
+  .pillar-dot.d { background: var(--pillar-d); }
+  .pillar-dot.e { background: var(--pillar-e); }
+
+  .project-name {
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+    letter-spacing: -0.005em;
+    line-height: 1.25;
+    display: flex;
+    align-items: center;
+  }
+
+  .project-due {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .project-due.risk {
+    color: var(--risk);
+    font-weight: 600;
+  }
+
+  .project-due.routine { color: var(--text-faint); }
+
+  .project-row2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding-left: 18px; /* aligns with project name after the dot */
+  }
+
+  .tag {
+    background: var(--bg-nested);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .progress-mini {
+    flex: 1;
+    height: 3px;
+    background: var(--bg-nested);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .progress-pct {
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+    text-align: right;
+    font-size: 11px;
+  }
+
+  .risk-marker {
+    color: var(--risk);
+    margin-right: 6px;
+    font-weight: 700;
+  }
+
+  /* Pillar legend - shows once at top of list, then can be tapped to filter */
+  .pillar-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 0 4px 4px;
+    margin-bottom: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  /* Capture */
+  .capture {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .capture-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .capture input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  .capture input::placeholder { color: var(--text-faint); }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="app-name">Course</div>
+    <div class="util">
+      <span>Review</span>
+      <span>History</span>
+    </div>
+  </div>
+  <div class="date">Wednesday, May 13</div>
+
+  <!-- Goals strip - now with Pillar accents -->
+  <div class="goals-strip" id="goals-strip">
+    <div class="goals-header" onclick="document.getElementById('goals-strip').classList.toggle('collapsed')">
+      <div class="goals-label">Aiming At · 3 goals</div>
+      <div class="goals-toggle">
+        <span>Hide</span>
+        <span class="chevron">▼</span>
+      </div>
+    </div>
+    <div class="goals-body">
+      <div class="goals-scroll">
+        <div class="goal-chip pillar-arrow">
+          <div class="goal-chip-name">Land Morocco expansion</div>
+          <div class="goal-chip-meta">
+            <div class="goal-progress"><div class="goal-progress-fill" style="width: 60%"></div></div>
+            <span>On track</span>
+          </div>
+        </div>
+        <div class="goal-chip pillar-sunny">
+          <div class="goal-chip-name">Hybrid fitness baseline</div>
+          <div class="goal-chip-meta">
+            <div class="goal-progress"><div class="goal-progress-fill" style="width: 35%"></div></div>
+            <span>Stalled</span>
+          </div>
+        </div>
+        <div class="goal-chip pillar-side">
+          <div class="goal-chip-name">Morocco-led EP</div>
+          <div class="goal-chip-meta">
+            <div class="goal-progress"><div class="goal-progress-fill" style="width: 20%"></div></div>
+            <span>3 sketched</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-toggle">
+    <div class="mode-btn">Tasks</div>
+    <div class="mode-btn active">Projects</div>
+  </div>
+
+  <!-- Pulse -->
+  <div class="pulse-card">
+    <div class="pulse-label">Morning Pulse</div>
+    <div class="pulse-text">Morocco hiring wraps this week. ECS presentation is quietly slipping — nothing's moved in five days. Two Slow Down Sunny projects are dormant. Worth choosing one to reactivate or archive today.</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">7</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num risk">2</div>
+      <div class="stat-label">At Risk</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num good">4</div>
+      <div class="stat-label">Done this wk</div>
+    </div>
+  </div>
+
+  <div class="section-label">
+    <span>Active Projects</span>
+    <span class="section-action">By Pillar</span>
+  </div>
+
+  <!-- Pillar legend -->
+  <div class="pillar-legend">
+    <div class="legend-item"><span class="pillar-dot arrow"></span>Arrow</div>
+    <div class="legend-item"><span class="pillar-dot sunny"></span>Slow Down Sunny</div>
+    <div class="legend-item"><span class="pillar-dot side"></span>Side Gigs</div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot arrow"></span>Morocco office expansion</div>
+      <div class="project-due">May 22</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Hiring</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 68%"></div></div>
+      <span class="progress-pct">68%</span>
+    </div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot arrow"></span><span class="risk-marker">!</span>ECS presentation deck</div>
+      <div class="project-due risk">May 17 · 4d</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Comms</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 22%"></div></div>
+      <span class="progress-pct">22%</span>
+    </div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot side"></span>Course app build</div>
+      <div class="project-due">Jun 4</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Apps</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 15%"></div></div>
+      <span class="progress-pct">15%</span>
+    </div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot sunny"></span><span class="risk-marker">!</span>Zone 2 cardio routine</div>
+      <div class="project-due risk">Stalled 9d</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Fitness</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 40%"></div></div>
+      <span class="progress-pct">40%</span>
+    </div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot sunny"></span>UK trip prep</div>
+      <div class="project-due">May 30</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Travel</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 55%"></div></div>
+      <span class="progress-pct">55%</span>
+    </div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot side"></span>Music — Moroccan EP</div>
+      <div class="project-due">No date</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Production</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 30%"></div></div>
+      <span class="progress-pct">30%</span>
+    </div>
+  </div>
+
+  <div class="project">
+    <div class="project-row1">
+      <div class="project-name"><span class="pillar-dot sunny"></span>Apartment mouse situation</div>
+      <div class="project-due routine">Routine</div>
+    </div>
+    <div class="project-row2">
+      <span class="tag">Home</span>
+      <div class="progress-mini"><div class="progress-fill" style="width: 80%"></div></div>
+      <span class="progress-pct">80%</span>
+    </div>
+  </div>
+
+  <div class="capture">
+    <div class="capture-icon">+</div>
+    <input type="text" placeholder="Capture a thought…" />
+  </div>
+
+</body>
+</html>

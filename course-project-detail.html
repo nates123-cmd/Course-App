@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course — Project</title>
+<style>
+  :root {
+    --bg: #1c1814;
+    --bg-elevated: #28221d;
+    --bg-nested: #322a23;
+    --border: #3a3128;
+    --text: #ede4d6;
+    --text-muted: #968878;
+    --text-faint: #5e5448;
+    --accent: #d49355;
+    --accent-dim: #8a6238;
+    --risk: #d4644a;
+    --good: #8aa365;
+
+    --pillar-arrow: #8aa3c4;
+    --pillar-sunny: #d4a86a;
+    --pillar-side: #b884c4;
+    --pillar-d: #7aa388;
+    --pillar-e: #c47878;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5efe4;
+      --bg-elevated: #ebe3d3;
+      --bg-nested: #e0d7c4;
+      --border: #d0c4ad;
+      --text: #221c14;
+      --text-muted: #6e6354;
+      --text-faint: #9a8e7c;
+      --accent: #a86528;
+      --accent-dim: #c4885a;
+      --risk: #b8533c;
+      --good: #6b8550;
+
+      --pillar-arrow: #4a6388;
+      --pillar-sunny: #8a6228;
+      --pillar-side: #7a4a8a;
+      --pillar-d: #4a7a5a;
+      --pillar-e: #8a4848;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 22px 20px 100px;
+    max-width: 440px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  /* Back nav */
+  .back-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    font-size: 14px;
+  }
+
+  .back-link {
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .back-link .arrow {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .header-actions span {
+    cursor: pointer;
+  }
+
+  .header-actions .accent {
+    color: var(--accent);
+  }
+
+  /* Identity strip */
+  .lineage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  .lineage .pillar-name {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .lineage .pillar-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pillar-arrow);
+    margin-right: 4px;
+    vertical-align: middle;
+    transform: translateY(-1px);
+  }
+
+  .lineage .sep {
+    color: var(--text-faint);
+  }
+
+  .project-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+
+  /* Outcome */
+  .outcome-block {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+
+  .outcome-label {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .outcome-text {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text);
+  }
+
+  /* Meta row — due date, progress, last activity */
+  .meta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+
+  .meta-cell {
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+
+  .meta-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 3px;
+  }
+
+  .meta-value {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .meta-value.risk { color: var(--risk); }
+
+  /* Next Moves panel - the hero */
+  .next-moves {
+    background: var(--bg-elevated);
+    border-radius: 18px;
+    padding: 18px 18px 12px;
+    margin-bottom: 22px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .next-moves-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .next-moves-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .next-moves-refresh {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .move-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .move-item:last-child { border-bottom: none; }
+
+  .move-text {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .move-context {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+
+  .move-make {
+    background: var(--bg-nested);
+    color: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Section toggle (Status / Date) */
+  .tasks-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .tasks-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .task-view-toggle {
+    display: flex;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    padding: 2px;
+    font-size: 11px;
+  }
+
+  .view-btn {
+    padding: 4px 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    font-weight: 500;
+  }
+
+  .view-btn.active {
+    background: var(--bg-nested);
+    color: var(--text);
+  }
+
+  /* Task status group */
+  .task-group {
+    margin-bottom: 14px;
+  }
+
+  .task-group-header {
+    padding: 0 4px 6px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .task-group-count {
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* Task row */
+  .task {
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+
+  .task:active { transform: scale(0.99); }
+
+  .task-check {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--text-faint);
+    border-radius: 6px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .task-check.done {
+    background: var(--good);
+    border-color: var(--good);
+    position: relative;
+  }
+
+  .task-check.done::after {
+    content: '✓';
+    position: absolute;
+    color: var(--bg);
+    font-size: 12px;
+    font-weight: 700;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .task-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .task-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+    margin-bottom: 3px;
+    letter-spacing: -0.005em;
+  }
+
+  .task-title.done {
+    color: var(--text-faint);
+    text-decoration: line-through;
+  }
+
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .effort-pill {
+    background: var(--bg-nested);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+  }
+
+  .work-type {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .do-date {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .do-date.today { color: var(--accent); font-weight: 600; }
+  .do-date.risk { color: var(--risk); font-weight: 600; }
+
+  .task-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .reminder-btn {
+    background: var(--bg-nested);
+    color: var(--accent);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .reminder-btn.sent {
+    color: var(--text-faint);
+    background: transparent;
+  }
+
+  /* Add task button */
+  .add-task {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    width: 100%;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .add-task-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 1.5px dashed var(--text-faint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--text-faint);
+  }
+
+  /* Collapsed done section */
+  .done-collapsed {
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 12px;
+    padding: 12px 0;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+
+  /* Capture */
+  .capture {
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .capture-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .capture input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  .capture input::placeholder { color: var(--text-faint); }
+</style>
+</head>
+<body>
+
+  <!-- Back nav -->
+  <div class="back-row">
+    <div class="back-link">
+      <span class="arrow">‹</span>
+      <span>Projects</span>
+    </div>
+    <div class="header-actions">
+      <span>Edit</span>
+      <span class="accent">Notion ↗</span>
+    </div>
+  </div>
+
+  <!-- Identity -->
+  <div class="lineage">
+    <span class="pillar-dot"></span>
+    <span class="pillar-name">Arrow</span>
+    <span class="sep">·</span>
+    <span>Hiring</span>
+    <span class="sep">·</span>
+    <span>Land Morocco expansion</span>
+  </div>
+
+  <h1 class="project-title">Morocco office expansion</h1>
+
+  <!-- Outcome -->
+  <div class="outcome-block">
+    <div class="outcome-label">Outcome</div>
+    <div class="outcome-text">Casablanca office fully staffed and operational with 8 hires onboarded by end of Q2.</div>
+  </div>
+
+  <!-- Meta row -->
+  <div class="meta-row">
+    <div class="meta-cell">
+      <div class="meta-label">Due</div>
+      <div class="meta-value">May 22</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-label">Progress</div>
+      <div class="meta-value">68%</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-label">Last move</div>
+      <div class="meta-value">2d ago</div>
+    </div>
+  </div>
+
+  <!-- Next Moves panel -->
+  <div class="next-moves">
+    <div class="next-moves-header">
+      <div class="next-moves-label">Next Moves</div>
+      <div class="next-moves-refresh">↻ Refresh</div>
+    </div>
+    <div class="move-item">
+      <div class="move-text">Confirm Casablanca lease terms with Cedric <span class="move-context">(sitting 6d)</span></div>
+      <button class="move-make">+ Task</button>
+    </div>
+    <div class="move-item">
+      <div class="move-text">Draft onboarding doc for May hires <span class="move-context">(start Mon)</span></div>
+      <button class="move-make">+ Task</button>
+    </div>
+    <div class="move-item">
+      <div class="move-text">Sync with Susie on local payroll <span class="move-context">(blocker risk)</span></div>
+      <button class="move-make">+ Task</button>
+    </div>
+  </div>
+
+  <!-- Tasks section -->
+  <div class="tasks-section-header">
+    <div class="tasks-label">Tasks · 6 open</div>
+    <div class="task-view-toggle">
+      <div class="view-btn active">By status</div>
+      <div class="view-btn">By date</div>
+    </div>
+  </div>
+
+  <!-- In Progress -->
+  <div class="task-group">
+    <div class="task-group-header">
+      <span>In Progress</span>
+      <span class="task-group-count">2</span>
+    </div>
+    <div class="task">
+      <div class="task-check"></div>
+      <div class="task-body">
+        <div class="task-title">Review Casablanca lease final terms</div>
+        <div class="task-meta">
+          <span class="work-type">Deep</span>
+          <span class="effort-pill">1h</span>
+          <span class="do-date today">Today</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="reminder-btn sent">✓ Sent</button>
+      </div>
+    </div>
+    <div class="task">
+      <div class="task-check"></div>
+      <div class="task-body">
+        <div class="task-title">Confirm visa documentation for two transfers</div>
+        <div class="task-meta">
+          <span class="work-type">Admin</span>
+          <span class="effort-pill">30m</span>
+          <span class="do-date">Thu</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="reminder-btn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next -->
+  <div class="task-group">
+    <div class="task-group-header">
+      <span>Next</span>
+      <span class="task-group-count">3</span>
+    </div>
+    <div class="task">
+      <div class="task-check"></div>
+      <div class="task-body">
+        <div class="task-title">Draft onboarding doc for May hires</div>
+        <div class="task-meta">
+          <span class="work-type">Deep</span>
+          <span class="effort-pill">2h+</span>
+          <span class="do-date">Fri</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="reminder-btn">Send</button>
+      </div>
+    </div>
+    <div class="task">
+      <div class="task-check"></div>
+      <div class="task-body">
+        <div class="task-title">Schedule kickoff with local team lead</div>
+        <div class="task-meta">
+          <span class="work-type">Admin</span>
+          <span class="effort-pill">15m</span>
+          <span class="do-date">Next wk</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="reminder-btn">Send</button>
+      </div>
+    </div>
+    <div class="task">
+      <div class="task-check"></div>
+      <div class="task-body">
+        <div class="task-title">Order workstations for new hires</div>
+        <div class="task-meta">
+          <span class="work-type">Admin</span>
+          <span class="effort-pill">30m</span>
+          <span class="do-date">Next wk</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="reminder-btn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waiting -->
+  <div class="task-group">
+    <div class="task-group-header">
+      <span>Waiting</span>
+      <span class="task-group-count">1</span>
+    </div>
+    <div class="task">
+      <div class="task-check"></div>
+      <div class="task-body">
+        <div class="task-title">Local payroll setup — waiting on Susie</div>
+        <div class="task-meta">
+          <span class="work-type">Admin</span>
+          <span class="effort-pill">15m</span>
+          <span class="do-date">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add task -->
+  <button class="add-task">
+    <span class="add-task-icon">+</span>
+    <span>Add a task</span>
+  </button>
+
+  <!-- Done collapsed -->
+  <div class="done-collapsed">▸ 4 completed tasks</div>
+
+  <!-- Capture -->
+  <div class="capture">
+    <div class="capture-icon">+</div>
+    <input type="text" placeholder="Capture a note on this project…" />
+  </div>
+
+</body>
+</html>
