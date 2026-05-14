@@ -6167,15 +6167,13 @@ Output strict JSON array (no surrounding prose, no code fences):
           </select>
         </div>
       ` : '';
-      const areaRow = (item.type === 'task' || item.type === 'project' || item.type === 'note') ? `
+      const areaRow = (item.type === 'task' || item.type === 'project') ? `
         <div class="capture-item-row">
           <span class="meta-label">Area</span>
-          <input class="capture-title-input" data-capture-area="${item.id}" list="capture-areas-dl-${item.id}"
-                 value="${escapeHtml(item.work_area || '')}"
-                 placeholder="— No area —" ${isDone ? 'disabled' : ''} />
-          <datalist id="capture-areas-dl-${item.id}">
-            ${workAreas.map(a => `<option value="${escapeHtml(a)}"></option>`).join('')}
-          </datalist>
+          <select class="capture-type-select" data-capture-area="${item.id}" ${isDone ? 'disabled' : ''}>
+            <option value="">— No area —</option>
+            ${workAreas.map(a => `<option value="${escapeHtml(a)}" ${item.work_area === a ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}
+          </select>
         </div>
       ` : '';
       const statusBadge = item.status === 'processed' ? '<span style="color: var(--good); font-size: var(--fs-11);">✓ Accepted</span>'
@@ -9824,18 +9822,14 @@ Content-Type: application/json
     if (!item) return;
     if (e.target.dataset.captureType) item.type = e.target.value;
     if (e.target.dataset.captureProject) item.project_id = e.target.value;
-    // Re-render so project dropdown appears/disappears when type toggles
+    if (e.target.dataset.captureArea) item.work_area = e.target.value || null;
+    // Re-render so project / area dropdowns appear/disappear when type toggles
     if (e.target.dataset.captureType) renderCaptureInbox();
   });
   document.getElementById('capture-inbox-view').addEventListener('input', (e) => {
     if (e.target.dataset.captureTitle) {
       const item = state.captureInbox.items.find(x => x.id === e.target.dataset.captureTitle);
       if (item) item.title = e.target.value;
-      return;
-    }
-    if (e.target.dataset.captureArea) {
-      const item = state.captureInbox.items.find(x => x.id === e.target.dataset.captureArea);
-      if (item) item.work_area = e.target.value;
       return;
     }
   });
