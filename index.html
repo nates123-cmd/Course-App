@@ -8765,11 +8765,22 @@ Output strict JSON array (no surrounding prose, no code fences):
     renderProjects();
   });
 
+  // Goals strip starts collapsed by default — the strip is reference, not the
+  // primary action surface. User's last toggle persists.
+  const GOALS_COLLAPSED_KEY = 'course_goals_collapsed';
+  (function applyGoalsCollapsed() {
+    const stored = localStorage.getItem(GOALS_COLLAPSED_KEY);
+    const collapsed = stored === null ? true : stored === 'true';
+    const strip = document.getElementById('goals-strip');
+    strip.classList.toggle('collapsed', collapsed);
+    document.getElementById('goals-toggle-text').textContent = collapsed ? 'Show' : 'Hide';
+  })();
   document.getElementById('goals-header').addEventListener('click', () => {
     const strip = document.getElementById('goals-strip');
     strip.classList.toggle('collapsed');
-    document.getElementById('goals-toggle-text').textContent =
-      strip.classList.contains('collapsed') ? 'Show' : 'Hide';
+    const collapsed = strip.classList.contains('collapsed');
+    localStorage.setItem(GOALS_COLLAPSED_KEY, String(collapsed));
+    document.getElementById('goals-toggle-text').textContent = collapsed ? 'Show' : 'Hide';
   });
 
   // — Goal chip tap → open goal sheet; + button → create —
