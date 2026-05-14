@@ -84,7 +84,8 @@
     --pct-min: 32px;              /* tabular-num min-width for % cells */
     --goal-chip-min: 200px;
     --goals-max-h:   200px;       /* collapse animation cap */
-    --layout-width:  440px;       /* outer column — V2 may relax this */
+    --layout-width:  440px;       /* outer column — bumps via media queries below */
+    --reading-width: 440px;       /* cap for content-heavy single-column views */
   }
 
   @media (prefers-color-scheme: light) {
@@ -109,6 +110,21 @@
     }
   }
 
+  /* Responsive layout scaling. Mobile-first column expands at desktop
+     breakpoints so the dashboard projects grid can flow into 2-4 columns
+     without rewriting any component. Content-heavy single-column views
+     (Project Detail, Pulse, Monday Open, Friday Close, Setup) cap at
+     reading-width so prose doesn't stretch uncomfortably wide. */
+  @media (min-width: 760px) {
+    :root { --layout-width: 720px; --reading-width: 660px; }
+  }
+  @media (min-width: 1100px) {
+    :root { --layout-width: 1080px; --reading-width: 720px; }
+  }
+  @media (min-width: 1440px) {
+    :root { --layout-width: 1320px; --reading-width: 760px; }
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -120,6 +136,36 @@
     max-width: var(--layout-width);
     margin: 0 auto;
     min-height: 100vh;
+  }
+
+  /* Content-heavy single-column views cap their inner width so prose
+     stays readable on wide screens. Dashboard view stays unconstrained
+     so its projects grid can use the full layout-width. */
+  #project-detail-view,
+  #pulse-view,
+  #monday-open-view,
+  #friday-close-view,
+  #setup-view,
+  #capture-inbox-view {
+    max-width: var(--reading-width);
+    margin: 0 auto;
+  }
+
+  /* Projects list becomes an auto-fill grid in Projects mode — single
+     column on phone, more columns as the window widens. Tasks mode reuses
+     this same div, so the grid class is toggled in JS rather than always-on.
+     In Tasks mode the list caps at reading-width so date-grouped task rows
+     don't stretch uncomfortably wide on desktop. */
+  #projects-list.grid-mode {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--sp-8);
+  }
+  #projects-list.grid-mode .project { margin-bottom: 0; }
+  #projects-list:not(.grid-mode) {
+    max-width: var(--reading-width);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   /* Header */
@@ -223,11 +269,13 @@
     border-radius: 0 var(--sp-1) var(--sp-1) 0;
     background: var(--text-faint);
   }
-  .goal-chip.pillar-arrow::before { background: var(--pillar-arrow); }
-  .goal-chip.pillar-sunny::before { background: var(--pillar-sunny); }
-  .goal-chip.pillar-side::before  { background: var(--pillar-side); }
-  .goal-chip.pillar-d::before     { background: var(--pillar-d); }
-  .goal-chip.pillar-e::before     { background: var(--pillar-e); }
+  .goal-chip.pillar-arrow::before { background: var(--pillar-color, var(--pillar-arrow)); }
+  .goal-chip.pillar-sunny::before { background: var(--pillar-color, var(--pillar-sunny)); }
+  .goal-chip.pillar-side::before  { background: var(--pillar-color, var(--pillar-side)); }
+  .goal-chip.pillar-d::before     { background: var(--pillar-color, var(--pillar-d)); }
+  .goal-chip.pillar-e::before     { background: var(--pillar-color, var(--pillar-e)); }
+  /* Custom color works even when pillar matches no known slot (no slug class) */
+  .goal-chip[style*="--pillar-color"]::before { background: var(--pillar-color); }
   .goal-chip-name {
     font-size: var(--fs-13);
     font-weight: 600;
@@ -684,7 +732,7 @@
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    max-width: var(--layout-width);
+    max-width: var(--reading-width);
     background: linear-gradient(to top, var(--bg) 60%, transparent);
     padding: var(--sp-20) var(--sp-20) var(--sp-28);
     display: flex;
@@ -1622,7 +1670,7 @@
     bottom: 0;
     left: 50%;
     width: 100%;
-    max-width: var(--layout-width);
+    max-width: var(--reading-width);
     background: var(--bg);
     border-top: var(--sp-1) solid var(--border);
     border-radius: var(--r-18) var(--r-18) 0 0;
@@ -1657,6 +1705,46 @@
   .task-sheet-close:hover { color: var(--text); }
   .task-sheet-section { margin-bottom: var(--sp-16); }
   .task-sheet-section .meta-label { margin-bottom: var(--sp-6); }
+  .settings-pillar-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-10);
+    padding: var(--sp-8) 0;
+    border-bottom: var(--sp-1) solid var(--border);
+  }
+  .settings-pillar-row:last-child { border-bottom: 0; }
+  .settings-pillar-name { flex: 1; font-size: var(--fs-13); color: var(--text); }
+  .settings-pillar-name .muted-slot {
+    color: var(--text-faint);
+    font-size: var(--fs-11);
+    margin-left: var(--sp-6);
+  }
+  .settings-pillar-input {
+    width: 36px;
+    height: 28px;
+    padding: 0;
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-6);
+    background: transparent;
+    cursor: pointer;
+  }
+  .settings-pillar-input::-webkit-color-swatch-wrapper { padding: 0; }
+  .settings-pillar-input::-webkit-color-swatch { border: 0; border-radius: var(--r-4); }
+  .settings-pillar-reset {
+    font-size: var(--fs-11);
+    color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: var(--sp-2) var(--sp-6);
+    font-family: inherit;
+  }
+  .settings-pillar-reset:hover { color: var(--accent); }
+  .settings-pillar-empty {
+    font-size: var(--fs-12);
+    color: var(--text-muted);
+    padding: var(--sp-4) 0 0;
+  }
   .task-sheet-title {
     font-size: var(--fs-15);
     font-weight: 600;
@@ -3229,6 +3317,51 @@
     return null;
   }
 
+  // — Pillar color overrides — per-pillar custom hex saved to localStorage —
+  const PILLAR_COLORS_KEY = 'course_pillar_colors';
+  function pillarKey(pillar) {
+    if (!pillar) return null;
+    return String(pillar).trim().toLowerCase();
+  }
+  function loadPillarColors() {
+    try { return JSON.parse(localStorage.getItem(PILLAR_COLORS_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function savePillarColors() {
+    localStorage.setItem(PILLAR_COLORS_KEY, JSON.stringify(state.pillarColors || {}));
+  }
+  function customPillarColor(pillar) {
+    const key = pillarKey(pillar);
+    if (!key) return null;
+    return (state.pillarColors && state.pillarColors[key]) || null;
+  }
+  function pillarSlotOf(pillar) {
+    // Unified slot resolver — pillarSlug catches "arrow/sunny/side"; pillarSlotForName adds life/personal → side.
+    return pillarSlug(pillar) || (typeof pillarSlotForName === 'function' ? pillarSlotForName(pillar) : null);
+  }
+  function resolvedPillarColor(pillar) {
+    // Returns the hex currently rendered for this pillar, or null if no color is assigned.
+    if (!pillar) return null;
+    const custom = customPillarColor(pillar);
+    if (custom) return custom;
+    const slot = pillarSlotOf(pillar);
+    if (!slot) return null;
+    const hex = getComputedStyle(document.documentElement).getPropertyValue('--pillar-' + slot).trim();
+    return hex || null;
+  }
+  function pillarDotHtml(pillar) {
+    if (!pillar) return '';
+    const slot = pillarSlotOf(pillar);
+    const hex = customPillarColor(pillar);
+    const style = hex ? ` style="background:${hex}"` : '';
+    return `<span class="pillar-dot ${slot || ''}"${style}></span>`;
+  }
+  function pillarChipColorAttr(pillar) {
+    // Inline style for goal-chip / lineage chip so its ::before bar honors the custom color.
+    const hex = customPillarColor(pillar);
+    return hex ? ` style="--pillar-color:${hex}"` : '';
+  }
+
   // — App state —
   const SETUP_STORAGE_KEY = 'course_setup_state';
   const SETUP_COMPLETE_KEY = 'course_setup_complete';
@@ -3266,6 +3399,7 @@
     mode: 'projects',
     projects: [],
     goals: [],
+    pillarColors: loadPillarColors(),
     setup: loadSetupState(),
     detail: { loading: false, projectId: null, project: null, tasks: [], goal: null, nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status' },
     tasksMode: { tasks: null, loading: false, addingForDate: null },
@@ -3483,7 +3617,7 @@
       const stateInfo = computeGoalState(g);
       const linkedCount = goalLinkedProjects(g.id).length;
       return `
-        <div class="goal-chip ${cls}" data-goal-id="${g.id}">
+        <div class="goal-chip ${cls}" data-goal-id="${g.id}"${pillarChipColorAttr(g.pillar)}>
           <div class="goal-chip-name">${escapeHtml(g.name)}</div>
           <div class="goal-chip-meta">
             <div class="goal-progress"><div class="goal-progress-fill" style="width:${prog.pct}%"></div></div>
@@ -3577,14 +3711,12 @@
     const prog = computeGoalProgress(goal);
     const stateInfo = computeGoalState(goal);
     const linked = goalLinkedProjects(goal.id);
-    const slug = pillarSlug(goal.pillar);
     const pillarChip = goal.pillar
-      ? `<span class="pillar-dot ${slug || ''}"></span> ${escapeHtml(goal.pillar)}`
+      ? `${pillarDotHtml(goal.pillar)} ${escapeHtml(goal.pillar)}`
       : '<span class="muted">No pillar</span>';
     const linkedRows = linked.length
       ? linked.map(p => {
-          const pSlug = pillarSlug(p.pillar);
-          const dot = pSlug ? `<span class="pillar-dot ${pSlug}"></span>` : '';
+          const dot = pillarDotHtml(p.pillar);
           const stat = p.status === 'done' ? '· done' : p.status === 'paused' ? '· paused' : '';
           return `<div class="goal-linked-row" data-goal-jump="${p.id}">${dot}<span>${escapeHtml(p.name)}</span><span class="muted">${stat}</span></div>`;
         }).join('')
@@ -3767,28 +3899,37 @@
   }
 
   function renderPillarLegend() {
-    const seen = new Set();
+    // Build a seen-pillar map keyed by name so legend respects per-pillar custom colors
+    // even when multiple pillars share a slot.
+    const seenByName = new Map();
     state.projects.forEach(p => {
-      const s = pillarSlug(p.pillar);
-      if (s) seen.add(s);
+      if (!p.pillar) return;
+      const key = pillarKey(p.pillar);
+      if (key && !seenByName.has(key)) seenByName.set(key, p.pillar);
     });
-    const order = KNOWN_PILLARS.filter(s => seen.has(s));
-    const labelFor = (slug) => {
-      const found = state.projects.find(p => pillarSlug(p.pillar) === slug);
-      return found ? (found.pillar || slug) : slug;
-    };
     const el = document.getElementById('pillar-legend');
-    if (order.length === 0) { el.innerHTML = ''; return; }
-    el.innerHTML = order.map(s =>
-      `<div class="legend-item"><span class="pillar-dot ${s}"></span>${escapeHtml(labelFor(s))}</div>`
+    if (seenByName.size === 0) { el.innerHTML = ''; return; }
+    // Order: known slots first (arrow, sunny, side, d, e), then everything else alphabetically
+    const entries = Array.from(seenByName.values());
+    entries.sort((a, b) => {
+      const sa = pillarSlotOf(a), sb = pillarSlotOf(b);
+      const ia = sa ? KNOWN_PILLARS.indexOf(sa) : 99;
+      const ib = sb ? KNOWN_PILLARS.indexOf(sb) : 99;
+      if (ia !== ib) return ia - ib;
+      return a.localeCompare(b);
+    });
+    el.innerHTML = entries.map(name =>
+      `<div class="legend-item">${pillarDotHtml(name)}${escapeHtml(name)}</div>`
     ).join('');
   }
 
   function renderProjects() {
     const list = document.getElementById('projects-list');
+    list.classList.add('grid-mode');
     const active = state.projects.filter(p => p.status === 'active');
 
     if (active.length === 0) {
+      list.classList.remove('grid-mode');
       list.innerHTML = `
         <div class="empty-state">
           No active projects yet.<br/>
@@ -3798,8 +3939,6 @@
     }
 
     list.innerHTML = active.map(p => {
-      const slug = pillarSlug(p.pillar);
-      const dotCls = slug || '';
       const days = daysUntil(p.due_date);
       const atRisk = days !== null && days < 7 && days >= 0;
       const overdue = days !== null && days < 0;
@@ -3821,7 +3960,7 @@
         <div class="project" data-id="${p.id}">
           <div class="project-row1">
             <div class="project-name">
-              <span class="pillar-dot ${dotCls}"></span>
+              ${pillarDotHtml(p.pillar)}
               ${atRisk || overdue || showStall ? '<span class="risk-marker">!</span>' : ''}
               ${escapeHtml(p.name)}
             </div>
@@ -4197,7 +4336,7 @@ Output strict JSON only, no surrounding prose, no code fences:
           : `<div class="pulse-nested-empty">No open tasks for this project.</div>`;
         return `
           <div class="pulse-row" data-jump-project="${it.id}">
-            <span class="pillar-dot ${pillarSlotForName(it.pillar) || ''}"></span>
+            ${pillarDotHtml(it.pillar) || '<span class="pillar-dot"></span>'}
             <div class="pulse-row-body">
               <div class="pulse-row-name">${escapeHtml(it.name)}</div>
               <div class="pulse-row-reason ${kind === 'risk' ? 'risk' : 'good'}">${escapeHtml(it.reason)}</div>
@@ -4966,9 +5105,8 @@ Output strict JSON array, no surrounding prose, no code fences:
     `;
 
     // Lineage line inside card (kept for legibility)
-    const pillarSlot = pillarSlotForName(project.pillar);
     const lineageParts = [];
-    if (project.pillar) lineageParts.push(`${pillarSlot ? `<span class="pillar-dot ${pillarSlot}"></span>` : ''}<span style="color: var(--text); font-weight: 600;">${escapeHtml(project.pillar)}</span>`);
+    if (project.pillar) lineageParts.push(`${pillarDotHtml(project.pillar)}<span style="color: var(--text); font-weight: 600;">${escapeHtml(project.pillar)}</span>`);
     if (project.work_area) lineageParts.push(`<span>${escapeHtml(project.work_area)}</span>`);
 
     const dueDays = daysUntil(project.due_date);
@@ -5058,10 +5196,7 @@ Output strict JSON array, no surrounding prose, no code fences:
         <div class="mo-pillar-pick">
           <div class="mo-pillar-pick-label">No pillar — pick one</div>
           <div class="mo-pillar-chips">
-            ${availablePillars.map(pl => {
-              const slot = pillarSlotForName(pl);
-              return `<button class="mo-pillar-chip" data-mo-set-pillar="${escapeHtml(pl)}">${slot ? `<span class="pillar-dot ${slot}"></span>` : ''}${escapeHtml(pl)}</button>`;
-            }).join('')}
+            ${availablePillars.map(pl => `<button class="mo-pillar-chip" data-mo-set-pillar="${escapeHtml(pl)}">${pillarDotHtml(pl)}${escapeHtml(pl)}</button>`).join('')}
           </div>
         </div>
       `
@@ -5840,33 +5975,25 @@ Write "The Read" — a brief observational review of the week.`;
     const movedBlock = `
       <div class="section-label" style="margin: var(--sp-18) var(--sp-4) var(--sp-10);">Moved</div>
       ${fc.moved.length
-        ? fc.moved.map(m => {
-            const slug = pillarSlug(m.project.pillar) || '';
-            const dotColor = slug === 'arrow' ? 'var(--pillar-arrow)' : slug === 'sunny' ? 'var(--pillar-sunny)' : slug === 'side' ? 'var(--pillar-side)' : slug === 'life' ? 'var(--pillar-life, var(--pillar-side))' : 'var(--text-faint)';
-            return `<div class="movement-item" data-fc-jump="${m.project.id}">
-              <div class="pillar-dot" style="background: ${dotColor};"></div>
+        ? fc.moved.map(m => `<div class="movement-item" data-fc-jump="${m.project.id}">
+              ${pillarDotHtml(m.project.pillar) || '<div class="pillar-dot"></div>'}
               <div class="item-body">
                 <div class="item-title">${escapeHtml(m.project.name)}</div>
                 <div class="item-meta good">${m.count} task${m.count > 1 ? 's' : ''} done</div>
               </div>
-            </div>`;
-          }).join('')
+            </div>`).join('')
         : '<div class="movement-empty">No tasks completed this week.</div>'}`;
 
     const slippedBlock = `
       <div class="section-label" style="margin: var(--sp-18) var(--sp-4) var(--sp-10);">Slipped</div>
       ${fc.slipped.length
-        ? fc.slipped.map(s => {
-            const slug = pillarSlug(s.project.pillar) || '';
-            const dotColor = slug === 'arrow' ? 'var(--pillar-arrow)' : slug === 'sunny' ? 'var(--pillar-sunny)' : slug === 'side' ? 'var(--pillar-side)' : slug === 'life' ? 'var(--pillar-life, var(--pillar-side))' : 'var(--text-faint)';
-            return `<div class="movement-item" data-fc-jump="${s.project.id}">
-              <div class="pillar-dot" style="background: ${dotColor};"></div>
+        ? fc.slipped.map(s => `<div class="movement-item" data-fc-jump="${s.project.id}">
+              ${pillarDotHtml(s.project.pillar) || '<div class="pillar-dot"></div>'}
               <div class="item-body">
                 <div class="item-title">${escapeHtml(s.project.name)}</div>
                 <div class="item-meta risk">Stalled ${s.daysIdle}d</div>
               </div>
-            </div>`;
-          }).join('')
+            </div>`).join('')
         : '<div class="movement-empty">Nothing stalled past five days.</div>'}`;
 
     const questionsBlock = `
@@ -6178,6 +6305,7 @@ Output strict JSON array (no surrounding prose, no code fences):
 
   async function renderTasksMode() {
     const list = document.getElementById('projects-list');
+    list.classList.remove('grid-mode');
     if (!state.tasksMode.tasks) {
       list.innerHTML = `<div class="loading">Loading tasks…</div>`;
       try {
@@ -6274,8 +6402,7 @@ Output strict JSON array (no surrounding prose, no code fences):
       const projectHtml = Object.entries(byProject).map(([pid, ts]) => {
         const proj = projectsById[pid];
         const projName = proj ? proj.name : '(unknown project)';
-        const slot = proj ? pillarSlotForName(proj.pillar) : null;
-        const dotHtml = slot ? `<span class="pillar-dot ${slot}"></span>` : '';
+        const dotHtml = proj ? pillarDotHtml(proj.pillar) : '';
         const subBudget = dayBudget(ts);
         const subBudgetHtml = subBudget ? ` · ${subBudget.label}` : '';
         return `
@@ -7155,7 +7282,9 @@ Output strict JSON array (no surrounding prose, no code fences):
         const editedAgo = fmtRelativeTime(p.lastEditedTime);
         if (editedAgo) lineageParts.push(`edited ${editedAgo}`);
         const lineage = lineageParts.join(' · ');
-        const dotHtml = pillarSlot ? `<span class="pillar-dot ${pillarSlot}"></span>` : '';
+        const customHex = pillarName ? customPillarColor(pillarName) : null;
+        const dotStyle = customHex ? ` style="background:${customHex}"` : '';
+        const dotHtml = (pillarSlot || customHex) ? `<span class="pillar-dot ${pillarSlot || ''}"${dotStyle}></span>` : '';
         const truncatedOutcome = p.outcome && p.outcome.length > 120
           ? p.outcome.slice(0, 120) + '…'
           : p.outcome;
@@ -7368,7 +7497,12 @@ Output strict JSON array (no surrounding prose, no code fences):
       const slot = p.pillarId && s.pillars && s.pillars[p.pillarId]
         ? s.pillars[p.pillarId].slot
         : null;
-      const dotHtml = slot ? `<span class="pillar-dot ${slot}"></span>` : '';
+      const pillarName = p.pillarId && s.pillars && s.pillars[p.pillarId]
+        ? s.pillars[p.pillarId].name
+        : null;
+      const customHex = pillarName ? customPillarColor(pillarName) : null;
+      const dotStyle = customHex ? ` style="background:${customHex}"` : '';
+      const dotHtml = (slot || customHex) ? `<span class="pillar-dot ${slot || ''}"${dotStyle}></span>` : '';
       const statusBadge = opts.showStatus
         ? `<span class="setup-status-badge">${escapeHtml(p.status)}</span>`
         : '';
@@ -7748,10 +7882,9 @@ Output strict JSON array (no surrounding prose, no code fences):
     }
 
     // Lineage
-    const pillarSlot = pillarSlotForName(p.pillar);
     const lineageParts = [];
     if (p.pillar) {
-      lineageParts.push(`${pillarSlot ? `<span class="pillar-dot ${pillarSlot}"></span>` : ''}<span class="pillar-name">${escapeHtml(p.pillar)}</span>`);
+      lineageParts.push(`${pillarDotHtml(p.pillar)}<span class="pillar-name">${escapeHtml(p.pillar)}</span>`);
     }
     if (p.work_area) lineageParts.push(`<span>${escapeHtml(p.work_area)}</span>`);
     if (d.goal) lineageParts.push(`<span>${escapeHtml(d.goal.name)}</span>`);
@@ -8369,7 +8502,6 @@ Output strict JSON array (no surrounding prose, no code fences):
     const task = findTaskById(state.taskSheet.taskId);
     if (!task) { closeTaskSheet(); return; }
     const project = task.project_id ? state.projects.find(p => p.id === task.project_id) : null;
-    const pillarSlot = project ? pillarSlotForName(project.pillar) : null;
     const statusLabel = TASK_STATUS_TO_NOTION[task.status] || task.status;
     const metaParts = [
       task.type ? `<span class="task-sheet-meta-chip">${escapeHtml(task.type)}</span>` : '',
@@ -8400,7 +8532,7 @@ Output strict JSON array (no surrounding prose, no code fences):
         ${project ? `
           <div class="task-sheet-project-extras">
             <button class="task-sheet-project-link" data-jump-project="${project.id}">
-              ${pillarSlot ? `<span class="pillar-dot ${pillarSlot}"></span>` : ''}
+              ${pillarDotHtml(project.pillar)}
               <span>Open ${escapeHtml(project.name)}</span>
               <span style="color: var(--text-muted);">→</span>
             </button>
@@ -9010,6 +9142,11 @@ Output strict JSON array (no surrounding prose, no code fences):
         <button class="nav-btn" id="settings-import-notion">Import a Notion page</button>
       </div>
       <div class="task-sheet-section">
+        <div class="meta-label">Pillar colors</div>
+        <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Pick a color for each of your pillars. Applies everywhere a dot or chip shows up.</div>
+        ${renderSettingsPillarColors()}
+      </div>
+      <div class="task-sheet-section">
         <div class="meta-label">Reminders sync</div>
         <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Two-way bridge via Apple Shortcuts. iOS-only.</div>
         <button class="nav-btn" id="settings-reminders-guide">${guideOpen ? 'Hide guide' : 'Setup guide'}</button>
@@ -9070,9 +9207,61 @@ Content-Type: application/json
       </div>
     `;
   }
+
+  function renderSettingsPillarColors() {
+    // Distinct pillar names across projects + goals (preserve original casing of first occurrence).
+    const byKey = new Map();
+    state.projects.forEach(p => {
+      if (!p.pillar) return;
+      const k = pillarKey(p.pillar);
+      if (k && !byKey.has(k)) byKey.set(k, p.pillar);
+    });
+    state.goals.forEach(g => {
+      if (!g.pillar) return;
+      const k = pillarKey(g.pillar);
+      if (k && !byKey.has(k)) byKey.set(k, g.pillar);
+    });
+    if (byKey.size === 0) {
+      return `<div class="settings-pillar-empty">No pillars yet — they'll show up here once you have projects or goals tagged with one.</div>`;
+    }
+    const names = Array.from(byKey.values()).sort((a, b) => {
+      const sa = pillarSlotOf(a), sb = pillarSlotOf(b);
+      const ia = sa ? KNOWN_PILLARS.indexOf(sa) : 99;
+      const ib = sb ? KNOWN_PILLARS.indexOf(sb) : 99;
+      if (ia !== ib) return ia - ib;
+      return a.localeCompare(b);
+    });
+    return names.map(name => {
+      const custom = customPillarColor(name);
+      const slot = pillarSlotOf(name);
+      const hex = resolvedPillarColor(name) || '#888888';
+      // Color inputs only accept 7-char hex; normalize.
+      const normalized = /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#888888';
+      const slotNote = slot ? `<span class="muted-slot">${slot}</span>` : `<span class="muted-slot">no default</span>`;
+      const resetBtn = custom ? `<button class="settings-pillar-reset" data-pillar-reset="${escapeHtml(name)}">Reset</button>` : '';
+      return `
+        <div class="settings-pillar-row">
+          <span class="settings-pillar-name">${escapeHtml(name)}${slotNote}</span>
+          <input type="color" class="settings-pillar-input" data-pillar-color="${escapeHtml(name)}" value="${normalized}" />
+          ${resetBtn}
+        </div>
+      `;
+    }).join('');
+  }
+
   document.getElementById('settings-link').addEventListener('click', () => openSettingsSheet());
   document.getElementById('settings-sheet-close').addEventListener('click', closeSettingsSheet);
   document.getElementById('settings-sheet-backdrop').addEventListener('click', closeSettingsSheet);
+  function rerenderForPillarColor() {
+    // Refresh anything that paints a pillar dot/chip.
+    if (typeof renderGoals === 'function') renderGoals();
+    if (typeof renderPillarLegend === 'function') renderPillarLegend();
+    if (state.view === 'dashboard') {
+      if (state.mode === 'tasks' && typeof renderTasksMode === 'function') renderTasksMode();
+      else if (typeof renderProjects === 'function') renderProjects();
+    }
+    if (state.view === 'project-detail' && typeof renderProjectDetail === 'function') renderProjectDetail();
+  }
   document.getElementById('settings-sheet').addEventListener('click', (e) => {
     if (e.target.id === 'settings-save-key') {
       const val = document.getElementById('settings-api-key').value.trim();
@@ -9099,6 +9288,18 @@ Content-Type: application/json
       renderSettingsSheet();
       return;
     }
+    const resetBtn = e.target.closest('[data-pillar-reset]');
+    if (resetBtn) {
+      const name = resetBtn.dataset.pillarReset;
+      const k = pillarKey(name);
+      if (k && state.pillarColors[k]) {
+        delete state.pillarColors[k];
+        savePillarColors();
+        renderSettingsSheet();
+        rerenderForPillarColor();
+      }
+      return;
+    }
     const copyBtn = e.target.closest('[data-copy-text]');
     if (copyBtn) {
       const txt = copyBtn.dataset.copyText;
@@ -9109,6 +9310,18 @@ Content-Type: application/json
       }).catch(() => alert('Copy failed — long-press to copy manually:\n\n' + txt));
       return;
     }
+  });
+  document.getElementById('settings-sheet').addEventListener('change', (e) => {
+    const picker = e.target.closest('[data-pillar-color]');
+    if (!picker) return;
+    const name = picker.dataset.pillarColor;
+    const hex = picker.value;
+    const k = pillarKey(name);
+    if (!k || !/^#[0-9a-f]{6}$/i.test(hex)) return;
+    state.pillarColors[k] = hex.toLowerCase();
+    savePillarColors();
+    renderSettingsSheet();
+    rerenderForPillarColor();
   });
   document.getElementById('settings-sheet').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'settings-api-key') {
