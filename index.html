@@ -7960,6 +7960,47 @@ Output strict JSON array (no surrounding prose, no code fences):
     return null;
   }
 
+  // — Push to Reminders via Apple Shortcuts —
+  // Shortcut name is fixed by spec: "CourseAddReminder". Input is a single
+  // pipe-delimited string the Shortcut splits client-side.
+  function buildRemindersDeeplink(task) {
+    const project = task.project_id ? state.projects.find(p => p.id === task.project_id) : null;
+    const parts = [
+      (task.title || '').trim(),
+      task.do_date || '',
+      project ? project.name : '',
+      task.notes || '',
+    ];
+    const input = parts.join('|');
+    return `shortcuts://run-shortcut?name=CourseAddReminder&input=text&text=${encodeURIComponent(input)}`;
+  }
+  async function sendTaskToReminders(taskId) {
+    const task = findTaskById(taskId);
+    if (!task) return;
+    const deeplink = buildRemindersDeeplink(task);
+    // Open the shortcut. On non-iOS this is a no-op visually but still safe.
+    window.location.href = deeplink;
+    // Mark sent optimistically — there's no callback from Shortcuts back to web.
+    const marker = `shortcut-${Date.now()}`;
+    try {
+      const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reminders_uuid: marker }),
+      });
+      const row = updated && updated[0];
+      if (row) {
+        [state.detail && state.detail.tasks, state.tasksMode && state.tasksMode.tasks].forEach(arr => {
+          if (!Array.isArray(arr)) return;
+          const t = arr.find(x => x.id === taskId);
+          if (t) Object.assign(t, row);
+        });
+        if (state.taskSheet.open && state.taskSheet.taskId === taskId) renderTaskSheet();
+      }
+    } catch (err) {
+      console.warn('Mark sent failed:', err);
+    }
+  }
+
   function openTaskSheet(taskId) {
     state.taskSheet = { open: true, taskId, statusPickerOpen: false };
     renderTaskSheet();
@@ -8064,6 +8105,14 @@ Output strict JSON array (no surrounding prose, no code fences):
           <div class="task-sheet-meta-grid">${metaParts}</div>
         </div>
       ` : ''}
+      <div class="task-sheet-section">
+        <div class="meta-label">Reminders</div>
+        ${task.reminders_uuid
+          ? `<div class="task-sheet-hint" style="margin-bottom: var(--sp-8); color: var(--good);">✓ Sent to Reminders.</div>
+             <button class="nav-btn" id="task-sheet-send-reminders">Re-send</button>`
+          : `<button class="nav-btn" id="task-sheet-send-reminders">Send to Reminders</button>
+             <div class="task-sheet-hint" style="margin-top: var(--sp-6);">Opens the <b>CourseAddReminder</b> Shortcut on iOS. See Settings → Reminders sync for setup.</div>`}
+      </div>
       <div class="task-sheet-section">
         <div class="meta-label">Notes</div>
         ${task.notes
@@ -8524,6 +8573,8 @@ Output strict JSON array (no surrounding prose, no code fences):
     const intro = reason === 'first-run'
       ? 'Welcome. To use Morning Pulse, Next Moves, and Monday Open, paste your Anthropic API key. Stored only on this device.'
       : 'Used for Morning Pulse, Next Moves, Monday Open, and Inbox triage. Stored only on this device (localStorage).';
+    const guideOpen = !!state.settingsGuideOpen;
+    const guideBlock = guideOpen ? renderRemindersGuide() : '';
     body.innerHTML = `
       <div class="task-sheet-section">
         <div class="meta-label">Anthropic API key</div>
@@ -8541,9 +8592,63 @@ Output strict JSON array (no surrounding prose, no code fences):
         <button class="nav-btn" id="settings-import-notion">Import a Notion page</button>
       </div>
       <div class="task-sheet-section">
+        <div class="meta-label">Reminders sync</div>
+        <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Two-way bridge via Apple Shortcuts. iOS-only.</div>
+        <button class="nav-btn" id="settings-reminders-guide">${guideOpen ? 'Hide guide' : 'Setup guide'}</button>
+        ${guideBlock}
+      </div>
+      <div class="task-sheet-section">
         <div class="meta-label">Setup</div>
         <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Already imported from Notion. Re-run only if you want to start from a fresh import (Course data stays in Supabase regardless).</div>
         <button class="nav-btn" id="settings-rerun-setup">Re-run setup flow</button>
+      </div>
+    `;
+  }
+  function renderRemindersGuide() {
+    const endpoint = `${SB_URL}/rest/v1/course_captures`;
+    const anonKey = SB_KEY;
+    return `
+      <div style="margin-top: var(--sp-14); padding: var(--sp-12) var(--sp-14); background: var(--bg-nested); border-radius: var(--r-10); border-left: var(--sp-3) solid var(--accent);">
+        <div style="font-size: var(--fs-13); line-height: 1.5; color: var(--text); margin-bottom: var(--sp-10);">
+          Two iOS Shortcuts. Build once. Both live in the Shortcuts app.
+        </div>
+
+        <div style="font-size: var(--fs-12); font-weight: 600; color: var(--accent); margin-top: var(--sp-12); margin-bottom: var(--sp-6); text-transform: uppercase; letter-spacing: var(--tr-wide-2);">1 · Course → Reminders</div>
+        <div style="font-size: var(--fs-12); line-height: 1.5; color: var(--text-muted);">
+          Name the Shortcut <b>CourseAddReminder</b> (exact). Accept Text input. Split input on <code>|</code> into 4 items (title / date / project / notes). Add a New Reminder with title = item 1, date = item 2 (if non-empty), notes = "Project: " + item 3 + newline + item 4.
+        </div>
+
+        <div style="font-size: var(--fs-12); font-weight: 600; color: var(--accent); margin-top: var(--sp-14); margin-bottom: var(--sp-6); text-transform: uppercase; letter-spacing: var(--tr-wide-2);">2 · Reminders → Course</div>
+        <div style="font-size: var(--fs-12); line-height: 1.5; color: var(--text-muted); margin-bottom: var(--sp-8);">
+          Name it <b>CourseSyncIn</b>. Use <b>Find Reminders</b> where List is <b>Course Inbox</b> and Is Completed is false. For each, run <b>Get Contents of URL</b> with:
+        </div>
+        <div style="font-size: var(--fs-11); font-family: monospace; background: var(--bg-elevated); padding: var(--sp-8) var(--sp-10); border-radius: var(--r-6); margin-bottom: var(--sp-8); word-break: break-all;">
+          POST ${endpoint}
+        </div>
+        <button class="nav-btn" data-copy-text="${endpoint}" style="margin-bottom: var(--sp-10);">Copy endpoint</button>
+        <div style="font-size: var(--fs-11); line-height: 1.5; color: var(--text-muted); margin-bottom: var(--sp-6);">
+          Headers (three):
+        </div>
+        <div style="font-size: var(--fs-11); font-family: monospace; background: var(--bg-elevated); padding: var(--sp-8) var(--sp-10); border-radius: var(--r-6); margin-bottom: var(--sp-8); word-break: break-all;">
+apikey: &lt;anon key&gt;<br>
+Authorization: Bearer &lt;anon key&gt;<br>
+Content-Type: application/json
+        </div>
+        <button class="nav-btn" data-copy-text="${anonKey}" style="margin-bottom: var(--sp-10);">Copy anon key</button>
+        <div style="font-size: var(--fs-11); line-height: 1.5; color: var(--text-muted); margin-bottom: var(--sp-6);">
+          Body — JSON, with the reminder's title as <code>raw_text</code>:
+        </div>
+        <div style="font-size: var(--fs-11); font-family: monospace; background: var(--bg-elevated); padding: var(--sp-8) var(--sp-10); border-radius: var(--r-6); margin-bottom: var(--sp-10);">
+{ "raw_text": "&lt;reminder title&gt;" }
+        </div>
+        <div style="font-size: var(--fs-12); line-height: 1.5; color: var(--text-muted);">
+          After the request succeeds, <b>Mark Reminder as Complete</b> so it doesn't re-import.
+        </div>
+
+        <div style="font-size: var(--fs-12); font-weight: 600; color: var(--accent); margin-top: var(--sp-14); margin-bottom: var(--sp-6); text-transform: uppercase; letter-spacing: var(--tr-wide-2);">3 · Auto-run on open</div>
+        <div style="font-size: var(--fs-12); line-height: 1.5; color: var(--text-muted);">
+          Settings → Shortcuts → Automation → <b>+ New Automation</b> → App → Course → When Opened → Run Shortcut: <b>CourseSyncIn</b>. Captures appear in your Inbox each time you open Course.
+        </div>
       </div>
     `;
   }
@@ -8570,6 +8675,21 @@ Output strict JSON array (no surrounding prose, no code fences):
     if (e.target.id === 'settings-import-notion') {
       closeSettingsSheet();
       openImportSheet();
+    }
+    if (e.target.id === 'settings-reminders-guide') {
+      state.settingsGuideOpen = !state.settingsGuideOpen;
+      renderSettingsSheet();
+      return;
+    }
+    const copyBtn = e.target.closest('[data-copy-text]');
+    if (copyBtn) {
+      const txt = copyBtn.dataset.copyText;
+      navigator.clipboard.writeText(txt).then(() => {
+        const prev = copyBtn.textContent;
+        copyBtn.textContent = 'Copied ✓';
+        setTimeout(() => { copyBtn.textContent = prev; }, 1200);
+      }).catch(() => alert('Copy failed — long-press to copy manually:\n\n' + txt));
+      return;
     }
   });
   document.getElementById('settings-sheet').addEventListener('keydown', (e) => {
@@ -9242,6 +9362,10 @@ Output strict JSON array (no surrounding prose, no code fences):
     if (jump) {
       closeTaskSheet();
       showView('project-detail', { projectId: jump.dataset.jumpProject });
+      return;
+    }
+    if (e.target.closest('#task-sheet-send-reminders')) {
+      sendTaskToReminders(state.taskSheet.taskId);
       return;
     }
   });
