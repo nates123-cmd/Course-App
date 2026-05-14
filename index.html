@@ -1292,6 +1292,15 @@
   .do-date { font-variant-numeric: tabular-nums; }
   .do-date.today { color: var(--accent); font-weight: 600; }
   .do-date.risk  { color: var(--risk);   font-weight: 600; }
+  .drift-pill {
+    background: var(--bg-nested);
+    color: var(--risk);
+    padding: var(--sp-1) var(--sp-6);
+    border-radius: var(--r-2);
+    font-size: var(--fs-10);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
 
   .add-task {
     background: transparent;
@@ -3493,6 +3502,18 @@
     // Re-flag a week after a dismissal if the project's still stalled.
     return ageMs < 7 * 86400000;
   }
+  // — Task drift detection —
+  // A task is "drifting" when it's been pushed forward ≥3 times and isn't done/dropped.
+  const TASK_DRIFT_THRESHOLD = 3;
+  function isTaskDrifting(task) {
+    if (!task) return false;
+    const count = task.reschedule_count || 0;
+    if (count < TASK_DRIFT_THRESHOLD) return false;
+    const status = task.status;
+    if (status === 'done' || status === 'dropped') return false;
+    return true;
+  }
+
   async function dismissStall(projectId) {
     if (!projectId) return;
     const nowIso = new Date().toISOString();
@@ -3795,10 +3816,14 @@ Output strict JSON only, no surrounding prose, no code fences:
         else if (doDays < 0) metaCls = 'risk';
       }
       const doLabel = t.do_date ? fmtDue(t.do_date) : '';
+      const driftHtml = isTaskDrifting(t)
+        ? `<span class="drift-pill" title="Rescheduled ${t.reschedule_count} times">↻ ${t.reschedule_count}×</span>`
+        : '';
       return `
         <div class="pulse-nested-task" data-task-id="${t.id}">
           <div class="task-check ${isDone ? 'done' : ''}" data-task-check="${t.id}"></div>
           <span class="pulse-nested-task-title ${isDone ? 'done' : ''}">${escapeHtml(t.title)}</span>
+          ${driftHtml}
           ${doLabel ? `<span class="pulse-nested-task-meta ${metaCls}">${escapeHtml(doLabel)}</span>` : ''}
         </div>
       `;
@@ -3840,6 +3865,11 @@ Output strict JSON only, no surrounding prose, no code fences:
     if (p.wantsAttention && p.wantsAttention.length) {
       html += `<div class="setup-section-label">Wants attention (${p.wantsAttention.length})</div>`;
       html += renderItemsWithTasks(p.wantsAttention, 'risk');
+    }
+    const driftingTasks = allTasks.filter(isTaskDrifting).slice(0, 5);
+    if (driftingTasks.length) {
+      html += `<div class="setup-section-label">Drifting (${driftingTasks.length})</div>`;
+      html += `<div class="pulse-nested-tasks" style="margin-left: 0; border-left: none; padding-left: 0;">${driftingTasks.map(renderNestedTask).join('')}</div>`;
     }
     if (p.onPace && p.onPace.length) {
       html += `<div class="setup-section-label">On pace (${p.onPace.length})</div>`;
@@ -5829,9 +5859,13 @@ Output strict JSON array (no surrounding prose, no code fences):
       const effortHtml = t.effort
         ? `<span class="effort-pill cycle" data-cycle-effort="${t.id}">${escapeHtml(t.effort)}</span>`
         : `<span class="effort-pill cycle empty" data-cycle-effort="${t.id}">+effort</span>`;
+      const driftHtml = isTaskDrifting(t)
+        ? `<span class="drift-pill" title="Rescheduled ${t.reschedule_count} times">↻ ${t.reschedule_count}×</span>`
+        : '';
       const meta = [
         workTypeHtml,
         effortHtml,
+        driftHtml,
         doLabel && !doCls ? `<span class="do-date">${escapeHtml(doLabel)}</span>` : '',
         t.person_dependency ? `<span>w/ ${escapeHtml(t.person_dependency)}</span>` : '',
       ].filter(Boolean).join('');
@@ -5997,6 +6031,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     if (!t) return;
     const prevDate = t.do_date;
     const prevOrder = t.day_order;
+    const prevCount = t.reschedule_count || 0;
     const tomorrow = localDateStr(new Date(Date.now() + 86400000));
     try {
       const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
@@ -6014,9 +6049,10 @@ Output strict JSON array (no surrounding prose, no code fences):
       showToast(`Pushed: ${t.title}`, {
         durationMs: 3000,
         undo: async () => {
+          // Send reschedule_count explicitly so the trigger doesn't re-increment.
           const undone = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ do_date: prevDate, day_order: prevOrder }),
+            body: JSON.stringify({ do_date: prevDate, day_order: prevOrder, reschedule_count: prevCount }),
           });
           if (undone && undone[0]) Object.assign(t, undone[0]);
           writebackTaskDoDate(t.notion_url, prevDate);
@@ -7623,9 +7659,13 @@ Output strict JSON array (no surrounding prose, no code fences):
         else if (doDays < 0) doCls = 'risk';
       }
       const doLabel = t.do_date ? fmtDue(t.do_date) : null;
+      const driftHtml = isTaskDrifting(t)
+        ? `<span class="drift-pill" title="Rescheduled ${t.reschedule_count} times">↻ ${t.reschedule_count}×</span>`
+        : '';
       const meta = [
         t.work_type ? `<span class="work-type">${escapeHtml(t.work_type)}</span>` : '',
         t.effort ? `<span class="effort-pill">${escapeHtml(t.effort)}</span>` : '',
+        driftHtml,
         doLabel ? `<span class="do-date ${doCls}">${escapeHtml(doLabel)}</span>` : '',
         t.person_dependency ? `<span>w/ ${escapeHtml(t.person_dependency)}</span>` : '',
       ].filter(Boolean).join('');
@@ -7993,6 +8033,11 @@ Output strict JSON array (no surrounding prose, no code fences):
       <div class="task-sheet-section">
         <div class="meta-label">Do date</div>
         <input type="date" class="task-sheet-date" id="task-sheet-do-date" value="${task.do_date || ''}" />
+        ${(task.reschedule_count || 0) > 0 ? `
+          <div class="task-sheet-hint" style="${isTaskDrifting(task) ? 'color: var(--risk); font-weight: 600;' : ''}">
+            ${isTaskDrifting(task) ? '↻ ' : ''}Rescheduled ${task.reschedule_count} time${task.reschedule_count === 1 ? '' : 's'}.
+          </div>
+        ` : ''}
       </div>
       ${metaParts ? `
         <div class="task-sheet-section">

@@ -52,6 +52,7 @@ create table course_tasks (
   reminders_uuid text,
   notion_url text,
   day_order int,
+  reschedule_count int not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -158,3 +159,22 @@ $$ language plpgsql;
 create trigger course_tasks_bump_project
   after insert or update on course_tasks
   for each row execute function course_bump_project_activity();
+
+-- Reschedule counter — bumps every time do_date shifts forward (unless caller
+-- explicitly sets reschedule_count, used by undo to revert without recounting).
+create or replace function course_count_task_reschedules() returns trigger as $$
+begin
+  if old.do_date is not null
+     and new.do_date is not null
+     and old.do_date is distinct from new.do_date
+     and new.do_date > old.do_date
+     and new.reschedule_count = old.reschedule_count then
+    new.reschedule_count = coalesce(old.reschedule_count, 0) + 1;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger course_tasks_reschedule_count
+  before update on course_tasks
+  for each row execute function course_count_task_reschedules();
