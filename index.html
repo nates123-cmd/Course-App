@@ -2636,6 +2636,7 @@
     <span class="inbox-link muted" id="inbox-link">Inbox</span>
     <span data-route="review">Review</span>
     <span data-route="history">History</span>
+    <span id="settings-link">Settings</span>
   </div>
 </div>
 <div class="date" id="date-line">—</div>
@@ -2759,6 +2760,13 @@
   <div class="task-sheet-handle"></div>
   <button class="task-sheet-close" id="create-sheet-close" aria-label="Close">✕</button>
   <div id="create-sheet-body"></div>
+</div>
+
+<div class="task-sheet-backdrop" id="settings-sheet-backdrop"></div>
+<div class="task-sheet" id="settings-sheet" role="dialog" aria-modal="true">
+  <div class="task-sheet-handle"></div>
+  <button class="task-sheet-close" id="settings-sheet-close" aria-label="Close">✕</button>
+  <div id="settings-sheet-body"></div>
 </div>
 
 <script src="./dev-config.js" onerror="void 0"></script>
@@ -7788,6 +7796,76 @@ Output strict JSON array (no surrounding prose, no code fences):
     }
   });
 
+  // — Settings sheet (API key + re-run setup) —
+  function openSettingsSheet({ reason } = {}) {
+    renderSettingsSheet(reason);
+    document.getElementById('settings-sheet').classList.add('open');
+    document.getElementById('settings-sheet-backdrop').classList.add('open');
+    setTimeout(() => {
+      const input = document.getElementById('settings-api-key');
+      if (input && !input.value) input.focus();
+    }, 280);
+  }
+  function closeSettingsSheet() {
+    document.getElementById('settings-sheet').classList.remove('open');
+    document.getElementById('settings-sheet-backdrop').classList.remove('open');
+  }
+  function renderSettingsSheet(reason) {
+    const body = document.getElementById('settings-sheet-body');
+    const currentKey = localStorage.getItem('anthropic_api_key') || '';
+    const masked = currentKey ? currentKey.slice(0, 8) + '…' + currentKey.slice(-4) : '';
+    const intro = reason === 'first-run'
+      ? 'Welcome. To use Morning Pulse, Next Moves, and Monday Open, paste your Anthropic API key. Stored only on this device.'
+      : 'Used for Morning Pulse, Next Moves, Monday Open, and Inbox triage. Stored only on this device (localStorage).';
+    body.innerHTML = `
+      <div class="task-sheet-section">
+        <div class="meta-label">Anthropic API key</div>
+        <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">${intro}</div>
+        ${currentKey ? `<div class="task-sheet-notes muted" style="margin-bottom: var(--sp-8);">Current: ${masked}</div>` : ''}
+        <input type="password" id="settings-api-key" class="task-sheet-input" placeholder="sk-ant-..." autocomplete="off" />
+        <div style="display: flex; gap: var(--sp-8); margin-top: var(--sp-12);">
+          <button class="nav-btn primary" id="settings-save-key">Save key</button>
+          ${currentKey ? `<button class="nav-btn" id="settings-clear-key">Clear</button>` : ''}
+        </div>
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">Setup</div>
+        <div class="task-sheet-notes" style="margin-bottom: var(--sp-10);">Already imported from Notion. Re-run only if you want to start from a fresh import (Course data stays in Supabase regardless).</div>
+        <button class="nav-btn" id="settings-rerun-setup">Re-run setup flow</button>
+      </div>
+    `;
+  }
+  document.getElementById('settings-link').addEventListener('click', () => openSettingsSheet());
+  document.getElementById('settings-sheet-close').addEventListener('click', closeSettingsSheet);
+  document.getElementById('settings-sheet-backdrop').addEventListener('click', closeSettingsSheet);
+  document.getElementById('settings-sheet').addEventListener('click', (e) => {
+    if (e.target.id === 'settings-save-key') {
+      const val = document.getElementById('settings-api-key').value.trim();
+      if (!val) return;
+      localStorage.setItem('anthropic_api_key', val);
+      closeSettingsSheet();
+    }
+    if (e.target.id === 'settings-clear-key') {
+      localStorage.removeItem('anthropic_api_key');
+      renderSettingsSheet();
+    }
+    if (e.target.id === 'settings-rerun-setup') {
+      if (!confirm('Re-run the setup flow? Your imported data is safe — this just walks you through the import again.')) return;
+      localStorage.removeItem(SETUP_COMPLETE_KEY);
+      closeSettingsSheet();
+      location.reload();
+    }
+  });
+  document.getElementById('settings-sheet').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'settings-api-key') {
+      e.preventDefault();
+      const val = e.target.value.trim();
+      if (!val) return;
+      localStorage.setItem('anthropic_api_key', val);
+      closeSettingsSheet();
+    }
+  });
+
   // — Dashboard pulse card → expanded view (with collapse toggle) —
   const PULSE_COLLAPSED_KEY = 'course_pulse_collapsed';
   function applyPulseCollapsed() {
@@ -8302,7 +8380,20 @@ Output strict JSON array (no surrounding prose, no code fences):
   // — Boot —
   async function boot() {
     renderDate();
-    const setupDone = localStorage.getItem(SETUP_COMPLETE_KEY) === 'true';
+    let setupDone = localStorage.getItem(SETUP_COMPLETE_KEY) === 'true';
+    if (!setupDone) {
+      // Supabase is the source of truth — if data already exists from a prior
+      // setup on another device, skip the import flow.
+      try {
+        const existing = await sbFetch('/course_projects?select=id&limit=1');
+        if (Array.isArray(existing) && existing.length > 0) {
+          localStorage.setItem(SETUP_COMPLETE_KEY, 'true');
+          setupDone = true;
+        }
+      } catch (err) {
+        console.warn('Setup-skip check failed:', err);
+      }
+    }
     if (!setupDone) {
       showView('setup');
       return;
@@ -8327,6 +8418,10 @@ Output strict JSON array (no surrounding prose, no code fences):
     fetchOrGeneratePulse();
     // Update inbox badge count
     updateInboxBadge();
+    // First-run on a new device: prompt for the Claude API key.
+    if (!localStorage.getItem('anthropic_api_key')) {
+      openSettingsSheet({ reason: 'first-run' });
+    }
   }
 
   boot();
