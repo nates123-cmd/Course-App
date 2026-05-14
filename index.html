@@ -2624,6 +2624,193 @@
     padding: var(--sp-6) var(--sp-10);
   }
   .pulse-regenerate:hover { color: var(--accent); }
+
+  /* — Friday Close — */
+  #friday-close-view .review-narrative {
+    background: var(--bg-elevated);
+    border-radius: var(--r-16);
+    padding: var(--sp-20);
+    margin-bottom: var(--sp-22);
+    border-left: var(--sp-3) solid var(--accent);
+  }
+  #friday-close-view .narrative-label {
+    font-size: var(--fs-10);
+    letter-spacing: var(--tr-wide-3);
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: var(--sp-10);
+  }
+  #friday-close-view .narrative-text {
+    font-size: var(--fs-15);
+    line-height: 1.55;
+    color: var(--text);
+    letter-spacing: var(--tr-tight-1);
+    white-space: pre-wrap;
+  }
+  #friday-close-view .narrative-loading {
+    font-size: var(--fs-13);
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  #friday-close-view .narrative-regen {
+    margin-top: var(--sp-10);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: var(--fs-12);
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+  #friday-close-view .narrative-regen:hover { color: var(--accent); }
+
+  #friday-close-view .movement-item {
+    background: var(--bg-elevated);
+    border-radius: var(--r-12);
+    padding: var(--sp-12) var(--sp-14);
+    margin-bottom: var(--sp-6);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    cursor: pointer;
+  }
+  #friday-close-view .movement-item:hover { background: var(--bg-nested); }
+  #friday-close-view .pillar-dot {
+    width: var(--sp-8);
+    height: var(--sp-8);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  #friday-close-view .item-body { flex: 1; min-width: 0; }
+  #friday-close-view .item-title {
+    font-size: var(--fs-14);
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: var(--sp-2);
+    color: var(--text);
+  }
+  #friday-close-view .item-meta {
+    font-size: var(--fs-11);
+    color: var(--text-muted);
+  }
+  #friday-close-view .item-meta.good { color: var(--good); }
+  #friday-close-view .item-meta.risk { color: var(--risk); }
+  #friday-close-view .movement-empty {
+    font-size: var(--fs-12);
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 0 var(--sp-4);
+  }
+
+  #friday-close-view .question-block { margin-bottom: var(--sp-22); }
+  #friday-close-view .question-label {
+    font-size: var(--fs-11);
+    letter-spacing: var(--tr-wide-3);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: var(--sp-10);
+  }
+  #friday-close-view .question-text {
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--text);
+    margin-bottom: var(--sp-12);
+    letter-spacing: var(--tr-tight-1);
+  }
+  #friday-close-view .answer-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-12);
+    padding: var(--sp-14) var(--sp-16);
+    color: var(--text);
+    font-size: var(--fs-15);
+    font-family: inherit;
+    line-height: 1.45;
+    resize: vertical;
+    min-height: 76px;
+    outline: none;
+  }
+  #friday-close-view .answer-input:focus { border-color: var(--accent-dim); }
+  #friday-close-view .answer-input::placeholder { color: var(--text-faint); }
+
+  #friday-close-view .push-still {
+    background: var(--bg-elevated);
+    border-radius: var(--r-14);
+    padding: var(--sp-16);
+    margin-bottom: var(--sp-22);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    cursor: pointer;
+  }
+  #friday-close-view .push-still-check {
+    width: var(--sp-20);
+    height: var(--sp-20);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--r-6);
+    flex-shrink: 0;
+    position: relative;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+  #friday-close-view .push-still-check.checked { background: var(--accent); }
+  #friday-close-view .push-still-check.checked::after {
+    content: '✓';
+    position: absolute;
+    color: var(--bg);
+    font-size: var(--fs-13);
+    font-weight: 700;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  #friday-close-view .push-still-body { flex: 1; }
+  #friday-close-view .push-still-title {
+    font-size: var(--fs-14);
+    font-weight: 500;
+    margin-bottom: var(--sp-2);
+    color: var(--text);
+  }
+  #friday-close-view .push-still-sub {
+    font-size: var(--fs-12);
+    color: var(--text-muted);
+  }
+
+  #friday-close-view .close-btn {
+    width: 100%;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--r-14);
+    padding: var(--sp-16);
+    font-size: var(--fs-16);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: var(--sp-8);
+  }
+  #friday-close-view .close-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #friday-close-view .close-btn.saved { background: var(--good); }
+
+  #friday-close-view .switch-flow {
+    font-size: var(--fs-12);
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: right;
+    margin-bottom: var(--sp-14);
+  }
+  #friday-close-view .switch-flow:hover { color: var(--accent); }
+  #monday-open-view .switch-flow {
+    font-size: var(--fs-12);
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: right;
+    margin-bottom: var(--sp-10);
+  }
+  #monday-open-view .switch-flow:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -2731,6 +2918,7 @@
     <span class="exit" id="mo-exit">Save &amp; exit</span>
   </div>
   <div class="flow-label">Monday Open</div>
+  <div class="switch-flow" id="mo-switch-flow">Switch to Friday Close ›</div>
   <div class="flow-title" id="mo-flow-title">Set the week</div>
   <div class="flow-sub" id="mo-flow-sub">Walk through active projects. Three questions each. Skip what doesn't need a decision.</div>
   <div id="mo-body"></div>
@@ -2738,6 +2926,18 @@
     <button class="nav-btn" id="mo-back">‹ Back</button>
     <button class="nav-btn primary" id="mo-next">Next project ›</button>
   </div>
+</div>
+
+<div id="friday-close-view" style="display: none;">
+  <div class="step-meta">
+    <span id="fc-week-meta">Week —</span>
+    <span class="exit" id="fc-exit">Save &amp; exit</span>
+  </div>
+  <div class="flow-label">Friday Close</div>
+  <div class="switch-flow" id="fc-switch-flow">Switch to Monday Open ›</div>
+  <div class="flow-title">Close the week</div>
+  <div class="flow-sub">A read of what moved, what didn't, and what to carry forward.</div>
+  <div id="fc-body"></div>
 </div>
 
 <div class="task-sheet-backdrop" id="task-sheet-backdrop"></div>
@@ -2973,6 +3173,22 @@
       saving: false,
       saved: false,
       weekOf: null,
+    },
+    fridayClose: {
+      loading: false,
+      weekOf: null,
+      weekEnd: null,
+      narrative: null,
+      narrativeLoading: false,
+      stats: { done: 0, pushed: 0, dropped: 0 },
+      moved: [],
+      slipped: [],
+      answers: { drop: '', pushForward: '', surprised: '' },
+      pushToStill: true,
+      reviewId: null,
+      saving: false,
+      saved: false,
+      error: null,
     },
     fab: { menuOpen: false },
     createSheet: { open: false, type: null, saving: false, draft: {} },
@@ -4886,6 +5102,326 @@ Output strict JSON array of strings, no surrounding prose:
     }
   }
 
+  // — Friday Close —
+  async function enterFridayClose() {
+    const fc = state.fridayClose;
+    const today = new Date();
+    const monday = parseLocalDate(getMondayOfWeek(today));
+    fc.weekOf = localDateStr(monday);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    fc.weekEnd = localDateStr(sunday);
+    fc.loading = true;
+    fc.error = null;
+    fc.saved = false;
+    fc.reviewId = null;
+    fc.narrative = null;
+    fc.answers = { drop: '', pushForward: '', surprised: '' };
+    fc.pushToStill = true;
+    renderFridayClose();
+    try {
+      const existing = await sbFetch(`/course_reviews?review_type=eq.friday_close&week_of=eq.${fc.weekOf}&select=*`);
+      if (existing && existing.length) {
+        const row = existing[0];
+        fc.reviewId = row.id;
+        fc.narrative = row.narrative_text || null;
+        if (row.answers_json) {
+          fc.answers.drop = row.answers_json.drop || '';
+          fc.answers.pushForward = row.answers_json.push_forward || '';
+          fc.answers.surprised = row.answers_json.surprised || '';
+        }
+        if (typeof row.pushed_to_still === 'boolean') fc.pushToStill = row.pushed_to_still;
+      }
+      await computeFridayCloseStats();
+      fc.loading = false;
+      renderFridayClose();
+      if (!fc.narrative) generateFridayCloseNarrative();
+    } catch (err) {
+      console.warn('enterFridayClose failed:', err);
+      fc.error = err.message;
+      fc.loading = false;
+      renderFridayClose();
+    }
+  }
+
+  async function computeFridayCloseStats() {
+    const fc = state.fridayClose;
+    // Tasks done in this week (by completed_date)
+    let doneTasks = [];
+    try {
+      doneTasks = await sbFetch(`/course_tasks?completed_date=gte.${fc.weekOf}&completed_date=lte.${fc.weekEnd}&status=eq.done&select=id,project_id,title,completed_date`) || [];
+    } catch (e) { console.warn('Done tasks fetch failed:', e); }
+    // Tasks dropped in this week (by updated_at within range, status dropped)
+    let droppedTasks = [];
+    try {
+      droppedTasks = await sbFetch(`/course_tasks?updated_at=gte.${fc.weekOf}T00:00:00&updated_at=lte.${fc.weekEnd}T23:59:59&status=eq.dropped&select=id,project_id`) || [];
+    } catch (e) { console.warn('Dropped tasks fetch failed:', e); }
+    // "Pushed" V1 proxy: tasks updated this week whose do_date is now past weekEnd and status is still open
+    let pushedTasks = [];
+    try {
+      pushedTasks = await sbFetch(`/course_tasks?updated_at=gte.${fc.weekOf}T00:00:00&updated_at=lte.${fc.weekEnd}T23:59:59&do_date=gt.${fc.weekEnd}&status=in.(next,in_progress,waiting,triage)&select=id`) || [];
+    } catch (e) { console.warn('Pushed tasks fetch failed:', e); }
+
+    fc.stats.done = doneTasks.length;
+    fc.stats.dropped = droppedTasks.length;
+    fc.stats.pushed = pushedTasks.length;
+
+    const projects = state.projects || [];
+    const tasksByProject = {};
+    doneTasks.forEach(t => {
+      if (!t.project_id) return;
+      tasksByProject[t.project_id] = (tasksByProject[t.project_id] || 0) + 1;
+    });
+    fc.moved = projects
+      .filter(p => tasksByProject[p.id] > 0)
+      .map(p => ({ project: p, count: tasksByProject[p.id] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const weekStartMs = parseLocalDate(fc.weekOf).getTime();
+    fc.slipped = projects
+      .filter(p => p.status === 'active' && !tasksByProject[p.id])
+      .map(p => {
+        const lastMs = p.last_activity_at ? new Date(p.last_activity_at).getTime() : 0;
+        const daysIdle = Math.max(0, Math.floor((Date.now() - lastMs) / 86400000));
+        return { project: p, daysIdle };
+      })
+      .filter(x => x.daysIdle >= 5)
+      .sort((a, b) => b.daysIdle - a.daysIdle)
+      .slice(0, 5);
+  }
+
+  async function generateFridayCloseNarrative() {
+    const fc = state.fridayClose;
+    if (fc.narrativeLoading) return;
+    fc.narrativeLoading = true;
+    renderFridayClose();
+    const movedSummary = fc.moved.length
+      ? fc.moved.map(m => `${m.project.name} (${m.count} task${m.count > 1 ? 's' : ''} done)`).join(', ')
+      : 'nothing significant';
+    const slippedSummary = fc.slipped.length
+      ? fc.slipped.map(s => `${s.project.name} (${s.daysIdle}d idle)`).join(', ')
+      : 'no active project stalled';
+    let mondayContext = '';
+    try {
+      const moRow = await sbFetch(`/course_reviews?review_type=eq.monday_open&week_of=eq.${fc.weekOf}&select=decisions_json`);
+      if (moRow && moRow.length && moRow[0].decisions_json) {
+        const decisions = moRow[0].decisions_json.decisions || [];
+        const yesProjects = decisions
+          .filter(d => d.decision === 'yes')
+          .map(d => {
+            const p = state.projects.find(x => x.id === d.project_id);
+            return p ? p.name : null;
+          })
+          .filter(Boolean);
+        if (yesProjects.length) {
+          mondayContext = `Monday's commitments: ${yesProjects.join(', ')}.`;
+        }
+      }
+    } catch (e) { /* skip */ }
+    const system = "You write tight, observational weekly reviews. Use short declarative sentences. Tie back to Monday's commitments where relevant. Use parentheticals for metadata. Never narrate or explain. 3-5 sentences total. No prefacing or hedging.";
+    const prompt = `Week of ${fc.weekOf} → ${fc.weekEnd}.
+Done: ${fc.stats.done} tasks. Pushed: ${fc.stats.pushed}. Dropped: ${fc.stats.dropped}.
+Projects that moved: ${movedSummary}.
+Projects that slipped: ${slippedSummary}.
+${mondayContext}
+
+Write "The Read" — a brief observational review of the week.`;
+    try {
+      const narrative = await callClaude(prompt, { system, maxTokens: 250 });
+      fc.narrative = (narrative || '').trim();
+      // Persist narrative immediately so it's cached
+      await persistFridayCloseRow();
+    } catch (err) {
+      console.warn('Narrative generation failed:', err);
+      fc.error = 'Couldn\'t generate The Read: ' + err.message;
+    } finally {
+      fc.narrativeLoading = false;
+      renderFridayClose();
+    }
+  }
+
+  async function persistFridayCloseRow() {
+    const fc = state.fridayClose;
+    if (!fc.weekOf) return;
+    const payload = {
+      narrative_text: fc.narrative || null,
+      answers_json: {
+        drop: fc.answers.drop || '',
+        push_forward: fc.answers.pushForward || '',
+        surprised: fc.answers.surprised || '',
+      },
+      pushed_to_still: fc.pushToStill,
+    };
+    try {
+      if (fc.reviewId) {
+        await sbFetch(`/course_reviews?id=eq.${fc.reviewId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        const created = await sbFetch('/course_reviews', {
+          method: 'POST',
+          body: JSON.stringify({
+            review_type: 'friday_close',
+            week_of: fc.weekOf,
+            ...payload,
+          }),
+        });
+        if (created && created[0]) fc.reviewId = created[0].id;
+      }
+    } catch (err) {
+      console.warn('Persist Friday Close row failed:', err);
+    }
+  }
+
+  let fcSaveTimer = null;
+  function scheduleFridayCloseSave() {
+    clearTimeout(fcSaveTimer);
+    fcSaveTimer = setTimeout(() => persistFridayCloseRow(), 600);
+  }
+
+  async function commitFridayClose() {
+    const fc = state.fridayClose;
+    if (fc.saving) return;
+    if (fc.saved) { showView('dashboard'); return; }
+    fc.saving = true;
+    renderFridayClose();
+    try {
+      await persistFridayCloseRow();
+      // Push to Still if requested + there's an answer to push
+      if (fc.pushToStill && (fc.answers.surprised || '').trim()) {
+        try {
+          await sbFetch('/reflections', {
+            method: 'POST',
+            body: JSON.stringify({
+              text: fc.answers.surprised.trim(),
+              tags: ['course', 'friday-close'],
+              prompt_used: 'What surprised you this week?',
+            }),
+          });
+        } catch (err) {
+          console.warn('Push to Still failed:', err);
+          showToast('Saved locally — Still push failed.', { durationMs: 3000 });
+        }
+      }
+      fc.saving = false;
+      fc.saved = true;
+      renderFridayClose();
+      showToast('Week closed.', { durationMs: 2500 });
+    } catch (err) {
+      console.warn('Commit Friday Close failed:', err);
+      fc.saving = false;
+      renderFridayClose();
+      alert('Commit failed: ' + err.message);
+    }
+  }
+
+  function renderFridayClose() {
+    const fc = state.fridayClose;
+    const body = document.getElementById('fc-body');
+    const weekMeta = document.getElementById('fc-week-meta');
+    if (fc.weekOf && weekMeta) {
+      const start = parseLocalDate(fc.weekOf);
+      const end = parseLocalDate(fc.weekEnd);
+      const fmt = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      weekMeta.textContent = `${fmt(start)} – ${fmt(end)}`;
+    }
+    if (!body) return;
+    if (fc.loading) {
+      body.innerHTML = '<div class="movement-empty" style="padding: var(--sp-20) 0;">Loading the week…</div>';
+      return;
+    }
+    const narrativeBlock = fc.narrativeLoading
+      ? `<div class="review-narrative">
+          <div class="narrative-label">The Read</div>
+          <div class="narrative-loading">Reading the week…</div>
+        </div>`
+      : fc.narrative
+      ? `<div class="review-narrative">
+          <div class="narrative-label">The Read</div>
+          <div class="narrative-text">${escapeHtml(fc.narrative)}</div>
+          <button class="narrative-regen" id="fc-regen-narrative">Regenerate</button>
+        </div>`
+      : `<div class="review-narrative">
+          <div class="narrative-label">The Read</div>
+          <div class="narrative-text" style="color: var(--text-muted); font-style: italic;">${fc.error ? escapeHtml(fc.error) : 'No read yet.'}</div>
+          <button class="narrative-regen" id="fc-regen-narrative">Generate</button>
+        </div>`;
+
+    const statsBlock = `
+      <div class="stats">
+        <div class="stat"><div class="stat-num good">${fc.stats.done}</div><div class="stat-label">Tasks done</div></div>
+        <div class="stat"><div class="stat-num">${fc.stats.pushed}</div><div class="stat-label">Pushed</div></div>
+        <div class="stat"><div class="stat-num risk">${fc.stats.dropped}</div><div class="stat-label">Dropped</div></div>
+      </div>`;
+
+    const movedBlock = `
+      <div class="section-label" style="margin: var(--sp-18) var(--sp-4) var(--sp-10);">Moved</div>
+      ${fc.moved.length
+        ? fc.moved.map(m => {
+            const slug = pillarSlug(m.project.pillar) || '';
+            const dotColor = slug === 'arrow' ? 'var(--pillar-arrow)' : slug === 'sunny' ? 'var(--pillar-sunny)' : slug === 'side' ? 'var(--pillar-side)' : slug === 'life' ? 'var(--pillar-life, var(--pillar-side))' : 'var(--text-faint)';
+            return `<div class="movement-item" data-fc-jump="${m.project.id}">
+              <div class="pillar-dot" style="background: ${dotColor};"></div>
+              <div class="item-body">
+                <div class="item-title">${escapeHtml(m.project.name)}</div>
+                <div class="item-meta good">${m.count} task${m.count > 1 ? 's' : ''} done</div>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div class="movement-empty">No tasks completed this week.</div>'}`;
+
+    const slippedBlock = `
+      <div class="section-label" style="margin: var(--sp-18) var(--sp-4) var(--sp-10);">Slipped</div>
+      ${fc.slipped.length
+        ? fc.slipped.map(s => {
+            const slug = pillarSlug(s.project.pillar) || '';
+            const dotColor = slug === 'arrow' ? 'var(--pillar-arrow)' : slug === 'sunny' ? 'var(--pillar-sunny)' : slug === 'side' ? 'var(--pillar-side)' : slug === 'life' ? 'var(--pillar-life, var(--pillar-side))' : 'var(--text-faint)';
+            return `<div class="movement-item" data-fc-jump="${s.project.id}">
+              <div class="pillar-dot" style="background: ${dotColor};"></div>
+              <div class="item-body">
+                <div class="item-title">${escapeHtml(s.project.name)}</div>
+                <div class="item-meta risk">Stalled ${s.daysIdle}d</div>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div class="movement-empty">Nothing stalled past five days.</div>'}`;
+
+    const questionsBlock = `
+      <div class="question-block" style="margin-top: var(--sp-26);">
+        <div class="question-label">Question 1</div>
+        <div class="question-text">What to drop?</div>
+        <textarea class="answer-input" id="fc-answer-drop" placeholder="Be honest — what's not yours this season…">${escapeHtml(fc.answers.drop || '')}</textarea>
+      </div>
+      <div class="question-block">
+        <div class="question-label">Question 2</div>
+        <div class="question-text">What to push forward?</div>
+        <textarea class="answer-input" id="fc-answer-push" placeholder="What carries into next week…">${escapeHtml(fc.answers.pushForward || '')}</textarea>
+      </div>
+      <div class="question-block">
+        <div class="question-label">Question 3</div>
+        <div class="question-text">What surprised you?</div>
+        <textarea class="answer-input" id="fc-answer-surprised" placeholder="Easier than expected, harder than expected, unexpected energy…">${escapeHtml(fc.answers.surprised || '')}</textarea>
+      </div>`;
+
+    const pushBlock = `
+      <div class="push-still" id="fc-push-still">
+        <div class="push-still-check ${fc.pushToStill ? 'checked' : ''}"></div>
+        <div class="push-still-body">
+          <div class="push-still-title">Save reflection to Still</div>
+          <div class="push-still-sub">Question 3 lands as a weekly entry</div>
+        </div>
+      </div>`;
+
+    const closeBtn = `
+      <button class="close-btn ${fc.saved ? 'saved' : ''}" id="fc-close-btn" ${fc.saving ? 'disabled' : ''}>
+        ${fc.saving ? 'Closing…' : fc.saved ? 'Closed · back to dashboard' : 'Close the week'}
+      </button>`;
+
+    body.innerHTML = narrativeBlock + statsBlock + movedBlock + slippedBlock + questionsBlock + pushBlock + closeBtn;
+  }
+
   // — Capture Inbox —
   const CAPTURE_TYPES = ['project', 'task', 'goal', 'note'];
 
@@ -5745,9 +6281,10 @@ Output strict JSON array (no surrounding prose, no code fences):
     document.getElementById('pulse-view').style.display = view === 'pulse' ? '' : 'none';
     document.getElementById('capture-inbox-view').style.display = view === 'capture-inbox' ? '' : 'none';
     document.getElementById('monday-open-view').style.display = view === 'monday-open' ? '' : 'none';
-    // Hide FAB on setup or monday-open; keep visible elsewhere. Close menu/sheet on view change.
+    document.getElementById('friday-close-view').style.display = view === 'friday-close' ? '' : 'none';
+    // Hide FAB on setup or weekly-review flows; keep visible elsewhere. Close menu/sheet on view change.
     const fab = document.getElementById('fab');
-    if (fab) fab.style.display = (view === 'setup' || view === 'monday-open') ? 'none' : 'flex';
+    if (fab) fab.style.display = (view === 'setup' || view === 'monday-open' || view === 'friday-close') ? 'none' : 'flex';
     if (state.fab && state.fab.menuOpen) setFabOpen(false);
     if (state.createSheet && state.createSheet.open) closeCreateSheet();
     if (view === 'setup') renderSetup();
@@ -5763,6 +6300,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     }
     else if (view === 'capture-inbox') fetchCaptureInbox();
     else if (view === 'monday-open') enterMondayOpen();
+    else if (view === 'friday-close') enterFridayClose();
     else if (view === 'dashboard') {
       // Re-render so any state changes (task done, status updated, etc.) reflect
       renderStats();
@@ -7888,9 +8426,13 @@ Output strict JSON array (no surrounding prose, no code fences):
   // — Inbox link → capture inbox view —
   document.getElementById('inbox-link').addEventListener('click', () => showView('capture-inbox'));
 
-  // — Review link → Monday Open —
+  // — Review link → Mon–Thu opens Monday Open; Fri–Sun opens Friday Close —
   document.querySelectorAll('[data-route="review"]').forEach(el => {
-    el.addEventListener('click', () => showView('monday-open'));
+    el.addEventListener('click', () => {
+      const day = new Date().getDay(); // 0=Sun, 5=Fri, 6=Sat
+      const goFriday = day === 5 || day === 6 || day === 0;
+      showView(goFriday ? 'friday-close' : 'monday-open');
+    });
   });
 
   // — Monday Open interactions —
@@ -8013,6 +8555,40 @@ Output strict JSON array (no surrounding prose, no code fences):
       }
     }
   });
+  document.getElementById('mo-switch-flow').addEventListener('click', () => showView('friday-close'));
+
+  // — Friday Close interactions —
+  document.getElementById('fc-exit').addEventListener('click', async () => {
+    await persistFridayCloseRow();
+    showView('dashboard');
+  });
+  document.getElementById('fc-switch-flow').addEventListener('click', () => showView('monday-open'));
+  document.getElementById('friday-close-view').addEventListener('click', (e) => {
+    if (e.target.closest('#fc-close-btn')) { commitFridayClose(); return; }
+    if (e.target.closest('#fc-regen-narrative')) {
+      state.fridayClose.narrative = null;
+      generateFridayCloseNarrative();
+      return;
+    }
+    if (e.target.closest('#fc-push-still')) {
+      state.fridayClose.pushToStill = !state.fridayClose.pushToStill;
+      renderFridayClose();
+      scheduleFridayCloseSave();
+      return;
+    }
+    const jump = e.target.closest('[data-fc-jump]');
+    if (jump) {
+      showView('project-detail', { projectId: jump.dataset.fcJump });
+      return;
+    }
+  });
+  document.getElementById('friday-close-view').addEventListener('input', (e) => {
+    const fc = state.fridayClose;
+    if (e.target.id === 'fc-answer-drop') { fc.answers.drop = e.target.value; scheduleFridayCloseSave(); return; }
+    if (e.target.id === 'fc-answer-push') { fc.answers.pushForward = e.target.value; scheduleFridayCloseSave(); return; }
+    if (e.target.id === 'fc-answer-surprised') { fc.answers.surprised = e.target.value; scheduleFridayCloseSave(); return; }
+  });
+
   document.getElementById('capture-inbox-back').addEventListener('click', () => showView('dashboard'));
   document.getElementById('capture-inbox-view').addEventListener('click', (e) => {
     const acc = e.target.closest('[data-capture-accept]');

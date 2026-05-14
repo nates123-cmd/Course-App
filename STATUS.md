@@ -18,7 +18,7 @@ Course is usable end-to-end: Setup Flow ran, real Notion data is imported, Dashb
 | 6 | Push-to-Reminders via Shortcuts | ❌ Not started |
 | 7 | Morning Pulse + web push + expanded view | ⚠️ Partial — Claude-generated narrative + one question + wants-attention/on-pace lists, cached per-day to `course_pulses`. Web push notifications still deferred. |
 | 8 | Monday Open flow | ✅ Complete — walks Active projects one at a time, three questions each (Yes/Push/Drop · next move · day chips), Claude batch-suggests next moves, commits to `course_reviews` with per-project timestamped `decisions_json`. "Yes" decisions auto-create `course_tasks`; "Drop" sets project to Archived + Notion writeback. |
-| 9 | Friday Close + Still integration | ❌ Not started |
+| 9 | Friday Close + Still integration | ✅ Complete — Claude-written "The Read" narrative, computed Moved/Slipped sections, three textareas (drop/push-forward/surprised), Save-to-Still toggle that POSTs Q3 to Still's `reflections` table. "Review" link in dashboard header auto-routes by day of week (Mon-Thu → Open, Fri-Sun → Close); each flow has a "Switch to ___" link to swap manually. |
 | 10 | Stall detection logic | ❌ Not started |
 | 11 | Selective Notion import (paste-URL) | ❌ Not started |
 | 12 | Goals strip refinement + Pillar color settings | ❌ Not started |
