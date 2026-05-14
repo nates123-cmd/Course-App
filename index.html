@@ -241,6 +241,28 @@
     font-size: var(--fs-11);
     color: var(--text-muted);
   }
+  .goal-chip-state.good { color: var(--good); font-weight: 600; }
+  .goal-chip-state.risk { color: var(--risk); font-weight: 600; }
+  .goal-chip-state.muted { color: var(--text-muted); }
+  .goal-chip-sub {
+    font-size: var(--fs-10);
+    color: var(--text-faint);
+    margin-top: var(--sp-4);
+    letter-spacing: var(--tr-wide-1);
+  }
+  .goal-chip:hover { background: var(--bg-elevated); }
+  .goal-chip-add {
+    border: var(--sp-1) dashed var(--border);
+    color: var(--text-muted);
+    background: transparent;
+    font-size: var(--fs-12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+  }
+  .goal-chip-add::before { display: none; }
+  .goal-chip-add:hover { color: var(--accent); border-color: var(--accent-dim); }
   .goal-progress {
     flex: 1;
     height: var(--bar-thin);
@@ -1058,6 +1080,33 @@
     color: var(--bg);
     border-color: var(--accent);
   }
+
+  .task-sheet-edit-icon {
+    font-size: var(--fs-11);
+    color: var(--text-faint);
+    margin-left: var(--sp-6);
+    cursor: pointer;
+  }
+  .goal-sheet-state {
+    font-size: var(--fs-13);
+    font-weight: 600;
+  }
+  .goal-sheet-state.good { color: var(--good); }
+  .goal-sheet-state.risk { color: var(--risk); }
+  .goal-sheet-state.muted { color: var(--text-muted); }
+  .goal-linked-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-8);
+    padding: var(--sp-8) var(--sp-10);
+    border-radius: var(--r-6);
+    background: var(--bg-nested);
+    margin-bottom: var(--sp-6);
+    cursor: pointer;
+    font-size: var(--fs-13);
+  }
+  .goal-linked-row:hover { background: var(--bg-elevated); }
+  .goal-linked-row .muted { color: var(--text-faint); font-size: var(--fs-11); margin-left: auto; }
 
   .stall-banner {
     background: var(--bg-elevated);
@@ -3027,6 +3076,13 @@
   <div id="import-sheet-body"></div>
 </div>
 
+<div class="task-sheet-backdrop" id="goal-sheet-backdrop"></div>
+<div class="task-sheet" id="goal-sheet" role="dialog" aria-modal="true">
+  <div class="task-sheet-handle"></div>
+  <button class="task-sheet-close" id="goal-sheet-close" aria-label="Close">✕</button>
+  <div id="goal-sheet-body"></div>
+</div>
+
 <script src="./dev-config.js" onerror="void 0"></script>
 <script>
   // — Supabase config (shared project with Break / Tick / Still / Tide) —
@@ -3233,6 +3289,14 @@
       weekOf: null,
     },
     stallDismissals: {}, // project_id → ISO timestamp of most recent dismissal
+    goalSheet: {
+      open: false,
+      goalId: null,          // null when creating a new goal
+      mode: 'view',          // 'view' | 'create'
+      editingField: null,    // 'name' | 'description' | 'pillar' | 'target_date' | null
+      draft: {},             // pending edits / new-goal draft
+      saving: false,
+    },
     import: {
       open: false,
       url: '',
@@ -3368,31 +3432,307 @@
     document.getElementById('date-line').textContent = todayLabel();
   }
 
+  // Linked projects for a goal — used for computed progress + state label.
+  function goalLinkedProjects(goalId) {
+    if (!goalId) return [];
+    return state.projects.filter(p => p.goal_id === goalId);
+  }
+  function computeGoalProgress(goal) {
+    if (goal.progress_pct !== null && goal.progress_pct !== undefined) {
+      return { pct: Math.max(0, Math.min(100, Number(goal.progress_pct))), source: 'manual' };
+    }
+    const linked = goalLinkedProjects(goal.id).filter(p => p.status === 'active' || p.status === 'done');
+    if (!linked.length) return { pct: 0, source: 'empty' };
+    const done = linked.filter(p => p.status === 'done').length;
+    return { pct: Math.round((done / linked.length) * 100), source: 'computed' };
+  }
+  function computeGoalState(goal) {
+    const linked = goalLinkedProjects(goal.id);
+    if (!linked.length) return { label: 'No projects', tone: 'muted' };
+    const active = linked.filter(p => p.status === 'active');
+    const done = linked.filter(p => p.status === 'done');
+    if (active.length === 0 && done.length === linked.length) return { label: 'Done', tone: 'good' };
+    if (active.length === 0) return { label: `${linked.length} sketched`, tone: 'muted' };
+    const weekAgo = Date.now() - 7 * 86400000;
+    const movedThisWeek = active.some(p => p.last_activity_at && new Date(p.last_activity_at).getTime() > weekAgo);
+    if (movedThisWeek) return { label: 'On track', tone: 'good' };
+    const twoWeeksAgo = Date.now() - 14 * 86400000;
+    const allStalled = active.every(p => !p.last_activity_at || new Date(p.last_activity_at).getTime() < twoWeeksAgo);
+    if (allStalled) return { label: 'Stalled', tone: 'risk' };
+    return { label: 'Active', tone: 'muted' };
+  }
+
   function renderGoals() {
     const scroll = document.getElementById('goals-scroll');
     const label = document.getElementById('goals-label');
-    const n = state.goals.length;
+    const active = state.goals.filter(g => g.status !== 'archived');
+    const n = active.length;
     label.textContent = `Aiming At · ${n} ${n === 1 ? 'goal' : 'goals'}`;
 
+    const addBtn = `<div class="goal-chip goal-chip-add" data-goal-add aria-label="Add a goal">+ Add a goal</div>`;
+
     if (n === 0) {
-      scroll.innerHTML = `<div class="goals-empty">No goals yet — <span class="accent">import from Notion</span> to populate.</div>`;
+      scroll.innerHTML = `<div class="goals-empty">No goals yet — <span class="accent" data-goal-add>add one</span> or import from Notion.</div>` + addBtn;
       return;
     }
 
-    scroll.innerHTML = state.goals.map(g => {
+    scroll.innerHTML = active.map(g => {
       const slug = pillarSlug(g.pillar);
       const cls = slug ? `pillar-${slug}` : '';
-      const pct = Number(g.progress_pct) || 0;
-      const stateLabel = g.current_state_label || '—';
+      const prog = computeGoalProgress(g);
+      const stateInfo = computeGoalState(g);
+      const linkedCount = goalLinkedProjects(g.id).length;
       return `
-        <div class="goal-chip ${cls}">
+        <div class="goal-chip ${cls}" data-goal-id="${g.id}">
           <div class="goal-chip-name">${escapeHtml(g.name)}</div>
           <div class="goal-chip-meta">
-            <div class="goal-progress"><div class="goal-progress-fill" style="width:${pct}%"></div></div>
-            <span>${escapeHtml(stateLabel)}</span>
+            <div class="goal-progress"><div class="goal-progress-fill" style="width:${prog.pct}%"></div></div>
+            <span class="goal-chip-state ${stateInfo.tone}">${escapeHtml(stateInfo.label)}</span>
           </div>
+          <div class="goal-chip-sub">${linkedCount} project${linkedCount === 1 ? '' : 's'}${prog.source === 'computed' && linkedCount ? ` · ${prog.pct}%` : ''}</div>
         </div>`;
-    }).join('');
+    }).join('') + addBtn;
+  }
+
+  // — Goal Sheet —
+  function openGoalSheet(goalId) {
+    const gs = state.goalSheet;
+    if (goalId) {
+      gs.goalId = goalId;
+      gs.mode = 'view';
+      gs.draft = {};
+    } else {
+      gs.goalId = null;
+      gs.mode = 'create';
+      gs.draft = { name: '', description: '', pillar: '', target_date: '' };
+    }
+    gs.open = true;
+    gs.editingField = null;
+    gs.saving = false;
+    renderGoalSheet();
+    document.getElementById('goal-sheet').classList.add('open');
+    document.getElementById('goal-sheet-backdrop').classList.add('open');
+    if (gs.mode === 'create') {
+      setTimeout(() => {
+        const el = document.getElementById('goal-sheet-name-input');
+        if (el) el.focus();
+      }, 280);
+    }
+  }
+  function closeGoalSheet() {
+    state.goalSheet.open = false;
+    state.goalSheet.editingField = null;
+    document.getElementById('goal-sheet').classList.remove('open');
+    document.getElementById('goal-sheet-backdrop').classList.remove('open');
+  }
+
+  function getPillarOptions() {
+    const seen = new Set();
+    state.projects.forEach(p => { if (p.pillar) seen.add(p.pillar); });
+    state.goals.forEach(g => { if (g.pillar) seen.add(g.pillar); });
+    return Array.from(seen);
+  }
+
+  function renderGoalSheet() {
+    const gs = state.goalSheet;
+    const body = document.getElementById('goal-sheet-body');
+    if (!body) return;
+
+    if (gs.mode === 'create') {
+      const pillars = getPillarOptions();
+      body.innerHTML = `
+        <div class="task-sheet-section">
+          <div class="task-sheet-title">New goal</div>
+        </div>
+        <div class="task-sheet-section">
+          <div class="meta-label">Name</div>
+          <input class="task-sheet-input" id="goal-sheet-name-input" placeholder="What are you aiming at?" value="${escapeHtml(gs.draft.name || '')}" />
+        </div>
+        <div class="task-sheet-section">
+          <div class="meta-label">Description</div>
+          <textarea class="task-sheet-input" id="goal-sheet-desc-input" rows="3" placeholder="(optional)">${escapeHtml(gs.draft.description || '')}</textarea>
+        </div>
+        <div class="task-sheet-section">
+          <div class="meta-label">Pillar</div>
+          <div class="chip-row">
+            ${pillars.map(p => `
+              <button class="chip ${gs.draft.pillar === p ? 'selected' : ''}" data-goal-pillar="${escapeHtml(p)}">${escapeHtml(p)}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="task-sheet-section">
+          <div class="meta-label">Target date</div>
+          <input type="date" class="task-sheet-date" id="goal-sheet-target-input" value="${gs.draft.target_date || ''}" />
+        </div>
+        <div style="display: flex; gap: var(--sp-8);">
+          <button class="nav-btn primary" id="goal-sheet-create-btn" ${gs.saving ? 'disabled' : ''}>${gs.saving ? 'Creating…' : 'Create goal'}</button>
+          <button class="nav-btn" id="goal-sheet-cancel-btn">Cancel</button>
+        </div>
+      `;
+      return;
+    }
+
+    const goal = state.goals.find(g => g.id === gs.goalId);
+    if (!goal) { body.innerHTML = '<div class="task-sheet-notes muted">Goal not found.</div>'; return; }
+    const prog = computeGoalProgress(goal);
+    const stateInfo = computeGoalState(goal);
+    const linked = goalLinkedProjects(goal.id);
+    const slug = pillarSlug(goal.pillar);
+    const pillarChip = goal.pillar
+      ? `<span class="pillar-dot ${slug || ''}"></span> ${escapeHtml(goal.pillar)}`
+      : '<span class="muted">No pillar</span>';
+    const linkedRows = linked.length
+      ? linked.map(p => {
+          const pSlug = pillarSlug(p.pillar);
+          const dot = pSlug ? `<span class="pillar-dot ${pSlug}"></span>` : '';
+          const stat = p.status === 'done' ? '· done' : p.status === 'paused' ? '· paused' : '';
+          return `<div class="goal-linked-row" data-goal-jump="${p.id}">${dot}<span>${escapeHtml(p.name)}</span><span class="muted">${stat}</span></div>`;
+        }).join('')
+      : '<div class="task-sheet-notes muted">No projects linked yet.</div>';
+
+    body.innerHTML = `
+      <div class="task-sheet-section">
+        ${gs.editingField === 'name'
+          ? `<input class="task-sheet-input" id="goal-sheet-name-edit" value="${escapeHtml(goal.name)}" />
+             <div style="display: flex; gap: var(--sp-6); margin-top: var(--sp-8);">
+               <button class="nav-btn primary" id="goal-sheet-save-name">Save</button>
+               <button class="nav-btn" id="goal-sheet-cancel-edit">Cancel</button>
+             </div>`
+          : `<div class="task-sheet-title" data-goal-edit="name">${escapeHtml(goal.name)} <span class="task-sheet-edit-icon">✎</span></div>`}
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">State</div>
+        <div class="goal-sheet-state ${stateInfo.tone}">${escapeHtml(stateInfo.label)} · ${prog.pct}%${prog.source === 'manual' ? ' (manual)' : ''}</div>
+        <div class="goal-progress" style="margin-top: var(--sp-8);"><div class="goal-progress-fill" style="width:${prog.pct}%"></div></div>
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">Description</div>
+        ${gs.editingField === 'description'
+          ? `<textarea class="task-sheet-input" id="goal-sheet-desc-edit" rows="3">${escapeHtml(goal.description || '')}</textarea>
+             <div style="display: flex; gap: var(--sp-6); margin-top: var(--sp-8);">
+               <button class="nav-btn primary" id="goal-sheet-save-description">Save</button>
+               <button class="nav-btn" id="goal-sheet-cancel-edit">Cancel</button>
+             </div>`
+          : `<div class="task-sheet-notes ${goal.description ? '' : 'muted'}" data-goal-edit="description" style="cursor: pointer;">${goal.description ? escapeHtml(goal.description) : 'Add a description…'} <span class="task-sheet-edit-icon">✎</span></div>`}
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">Pillar</div>
+        <div class="task-sheet-notes">${pillarChip}</div>
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">Target date</div>
+        ${gs.editingField === 'target_date'
+          ? `<input type="date" class="task-sheet-date" id="goal-sheet-target-edit" value="${goal.target_date || ''}" />
+             <div style="display: flex; gap: var(--sp-6); margin-top: var(--sp-8);">
+               <button class="nav-btn primary" id="goal-sheet-save-target_date">Save</button>
+               <button class="nav-btn" id="goal-sheet-cancel-edit">Cancel</button>
+             </div>`
+          : `<div class="task-sheet-notes ${goal.target_date ? '' : 'muted'}" data-goal-edit="target_date" style="cursor: pointer;">${goal.target_date ? escapeHtml(fmtDue(goal.target_date)) : 'Set a target…'} <span class="task-sheet-edit-icon">✎</span></div>`}
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">Linked projects (${linked.length})</div>
+        ${linkedRows}
+      </div>
+      <div style="display: flex; gap: var(--sp-8); margin-top: var(--sp-14);">
+        <button class="nav-btn" id="goal-sheet-archive-btn">${goal.status === 'archived' ? 'Unarchive' : 'Archive goal'}</button>
+      </div>
+    `;
+  }
+
+  async function saveGoalField(field) {
+    const gs = state.goalSheet;
+    const goal = state.goals.find(g => g.id === gs.goalId);
+    if (!goal) return;
+    let payload = {};
+    if (field === 'name') {
+      const el = document.getElementById('goal-sheet-name-edit');
+      const v = (el && el.value || '').trim();
+      if (!v) { alert('Name is required.'); return; }
+      payload.name = v;
+    } else if (field === 'description') {
+      const el = document.getElementById('goal-sheet-desc-edit');
+      payload.description = (el && el.value || '').trim() || null;
+    } else if (field === 'target_date') {
+      const el = document.getElementById('goal-sheet-target-edit');
+      payload.target_date = (el && el.value) || null;
+    }
+    try {
+      const updated = await sbFetch(`/course_goals?id=eq.${goal.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      if (updated && updated[0]) Object.assign(goal, updated[0]);
+      gs.editingField = null;
+      renderGoalSheet();
+      renderGoals();
+    } catch (err) {
+      console.warn('Save goal field failed:', err);
+      alert('Save failed: ' + err.message);
+    }
+  }
+
+  async function createGoalFromSheet() {
+    const gs = state.goalSheet;
+    const name = (document.getElementById('goal-sheet-name-input') || {}).value || '';
+    if (!name.trim()) { alert('Name is required.'); return; }
+    const description = (document.getElementById('goal-sheet-desc-input') || {}).value || '';
+    const target = (document.getElementById('goal-sheet-target-input') || {}).value || '';
+    gs.saving = true;
+    renderGoalSheet();
+    try {
+      const inserted = await sbFetch('/course_goals', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || null,
+          pillar: gs.draft.pillar || null,
+          target_date: target || null,
+          status: 'active',
+        }),
+      });
+      if (inserted && inserted[0]) {
+        state.goals.unshift(inserted[0]);
+        renderGoals();
+        gs.goalId = inserted[0].id;
+        gs.mode = 'view';
+        gs.saving = false;
+        renderGoalSheet();
+      } else {
+        gs.saving = false;
+        renderGoalSheet();
+      }
+    } catch (err) {
+      gs.saving = false;
+      renderGoalSheet();
+      alert('Create failed: ' + err.message);
+    }
+  }
+
+  async function toggleGoalArchive() {
+    const gs = state.goalSheet;
+    const goal = state.goals.find(g => g.id === gs.goalId);
+    if (!goal) return;
+    const next = goal.status === 'archived' ? 'active' : 'archived';
+    try {
+      const updated = await sbFetch(`/course_goals?id=eq.${goal.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: next }),
+      });
+      if (updated && updated[0]) Object.assign(goal, updated[0]);
+      if (next === 'archived') {
+        // Drop archived goal from dashboard visibility; keep on goal sheet briefly then close.
+        state.goals = state.goals.filter(g => g.id !== goal.id || g.status !== 'archived');
+        closeGoalSheet();
+        renderGoals();
+        showToast(`Goal archived: ${goal.name}`, { durationMs: 2500 });
+      } else {
+        renderGoalSheet();
+        renderGoals();
+      }
+    } catch (err) {
+      console.warn('Archive goal failed:', err);
+      alert('Archive failed: ' + err.message);
+    }
   }
 
   function renderStats() {
@@ -8300,6 +8640,84 @@ Output strict JSON array (no surrounding prose, no code fences):
     strip.classList.toggle('collapsed');
     document.getElementById('goals-toggle-text').textContent =
       strip.classList.contains('collapsed') ? 'Show' : 'Hide';
+  });
+
+  // — Goal chip tap → open goal sheet; + button → create —
+  document.getElementById('goals-scroll').addEventListener('click', (e) => {
+    if (e.target.closest('[data-goal-add]')) {
+      openGoalSheet(null);
+      return;
+    }
+    const chip = e.target.closest('[data-goal-id]');
+    if (chip) {
+      openGoalSheet(chip.dataset.goalId);
+      return;
+    }
+  });
+
+  // — Goal sheet interactions —
+  document.getElementById('goal-sheet-close').addEventListener('click', closeGoalSheet);
+  document.getElementById('goal-sheet-backdrop').addEventListener('click', closeGoalSheet);
+  document.getElementById('goal-sheet').addEventListener('click', (e) => {
+    if (e.target.closest('#goal-sheet-create-btn')) { createGoalFromSheet(); return; }
+    if (e.target.closest('#goal-sheet-cancel-btn')) { closeGoalSheet(); return; }
+    if (e.target.closest('#goal-sheet-cancel-edit')) {
+      state.goalSheet.editingField = null;
+      renderGoalSheet();
+      return;
+    }
+    if (e.target.closest('#goal-sheet-archive-btn')) { toggleGoalArchive(); return; }
+    // Save buttons — id pattern goal-sheet-save-<field>
+    const saveBtn = e.target.closest('[id^="goal-sheet-save-"]');
+    if (saveBtn) {
+      const field = saveBtn.id.replace('goal-sheet-save-', '');
+      saveGoalField(field);
+      return;
+    }
+    // Edit triggers
+    const editTrigger = e.target.closest('[data-goal-edit]');
+    if (editTrigger) {
+      state.goalSheet.editingField = editTrigger.dataset.goalEdit;
+      renderGoalSheet();
+      const focusMap = {
+        name: 'goal-sheet-name-edit',
+        description: 'goal-sheet-desc-edit',
+        target_date: 'goal-sheet-target-edit',
+      };
+      const focusId = focusMap[editTrigger.dataset.goalEdit];
+      if (focusId) setTimeout(() => {
+        const el = document.getElementById(focusId);
+        if (el) { el.focus(); if (el.select) el.select(); }
+      }, 30);
+      return;
+    }
+    // Linked-project jump
+    const jump = e.target.closest('[data-goal-jump]');
+    if (jump) {
+      closeGoalSheet();
+      showView('project-detail', { projectId: jump.dataset.goalJump });
+      return;
+    }
+    // Pillar pick in create mode
+    const pBtn = e.target.closest('[data-goal-pillar]');
+    if (pBtn) {
+      state.goalSheet.draft.pillar = pBtn.dataset.goalPillar;
+      renderGoalSheet();
+      return;
+    }
+  });
+  document.getElementById('goal-sheet').addEventListener('input', (e) => {
+    const gs = state.goalSheet;
+    if (gs.mode !== 'create') return;
+    if (e.target.id === 'goal-sheet-name-input') gs.draft.name = e.target.value;
+    if (e.target.id === 'goal-sheet-desc-input') gs.draft.description = e.target.value;
+    if (e.target.id === 'goal-sheet-target-input') gs.draft.target_date = e.target.value;
+  });
+  document.getElementById('goal-sheet').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.target.id === 'goal-sheet-name-input')) {
+      e.preventDefault();
+      createGoalFromSheet();
+    }
   });
 
   document.querySelectorAll('.mode-btn').forEach(btn => {
