@@ -1059,6 +1059,48 @@
     border-color: var(--accent);
   }
 
+  .stall-banner {
+    background: var(--bg-elevated);
+    border-left: var(--sp-3) solid var(--risk);
+    border-radius: var(--r-12);
+    padding: var(--sp-12) var(--sp-14);
+    margin-bottom: var(--sp-18);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-12);
+  }
+  .stall-banner-body { flex: 1; min-width: 0; }
+  .stall-banner-label {
+    font-size: var(--fs-10);
+    letter-spacing: var(--tr-wide-3);
+    color: var(--risk);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: var(--sp-6);
+  }
+  .stall-banner-text {
+    font-size: var(--fs-13);
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: var(--sp-2);
+  }
+  .stall-banner-meta {
+    font-size: var(--fs-11);
+    color: var(--text-muted);
+  }
+  .stall-banner-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: var(--fs-12);
+    cursor: pointer;
+    font-family: inherit;
+    padding: var(--sp-4) var(--sp-8);
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .stall-banner-dismiss:hover { color: var(--accent); }
+
   .next-moves {
     background: var(--bg-elevated);
     border-radius: var(--r-18);
@@ -3174,6 +3216,7 @@
       saved: false,
       weekOf: null,
     },
+    stallDismissals: {}, // project_id → ISO timestamp of most recent dismissal
     fridayClose: {
       loading: false,
       weekOf: null,
@@ -3343,7 +3386,9 @@
       const active = state.projects.filter(p => p.status === 'active');
       const atRisk = active.filter(p => {
         const d = daysUntil(p.due_date);
-        return d !== null && d < 7;
+        if (d !== null && d < 7) return true;
+        const stall = getStallInfo(p);
+        return !!stall && !isStallDismissed(p.id);
       }).length;
       row.innerHTML = `
         <div class="stat"><div class="stat-num">${active.length}</div><div class="stat-label">Active</div></div>
@@ -3391,12 +3436,15 @@
       const atRisk = days !== null && days < 7 && days >= 0;
       const overdue = days !== null && days < 0;
       const isRoutine = p.status === 'routine';
+      const stall = getStallInfo(p);
+      const showStall = !!stall && !atRisk && !overdue && !isStallDismissed(p.id);
 
       let dueLabel = fmtDue(p.due_date);
       let dueCls = '';
       if (isRoutine) { dueLabel = 'Routine'; dueCls = 'routine'; }
       else if (overdue) { dueLabel = `${dueLabel} · ${Math.abs(days)}d over`; dueCls = 'risk'; }
       else if (atRisk) { dueLabel = `${dueLabel} · ${days}d`; dueCls = 'risk'; }
+      else if (showStall) { dueLabel = `Stalled ${stall.daysIdle}d`; dueCls = 'risk'; }
 
       const pct = 0; // task-derived progress lands in build step 5
       const workArea = p.work_area ? `<span class="tag">${escapeHtml(p.work_area)}</span>` : '';
@@ -3406,7 +3454,7 @@
           <div class="project-row1">
             <div class="project-name">
               <span class="pillar-dot ${dotCls}"></span>
-              ${atRisk || overdue ? '<span class="risk-marker">!</span>' : ''}
+              ${atRisk || overdue || showStall ? '<span class="risk-marker">!</span>' : ''}
               ${escapeHtml(p.name)}
             </div>
             <div class="project-due ${dueCls}">${dueLabel}</div>
@@ -3418,6 +3466,49 @@
           </div>
         </div>`;
     }).join('');
+  }
+
+  // — Stall detection —
+  // Active project + ≥7d since last task activity + due within 30 days
+  // (overdue and at-risk are separate, more urgent signals). Returns null
+  // when not stalled; otherwise { daysIdle, dueDays }.
+  const STALL_IDLE_DAYS = 7;
+  const STALL_DUE_HORIZON = 30;
+  function getStallInfo(project) {
+    if (!project || project.status !== 'active') return null;
+    const dueDays = daysUntil(project.due_date);
+    if (dueDays === null) return null;
+    if (dueDays < 0 || dueDays > STALL_DUE_HORIZON) return null;
+    const lastMs = project.last_activity_at ? new Date(project.last_activity_at).getTime() : 0;
+    if (!lastMs) return null;
+    const daysIdle = Math.floor((Date.now() - lastMs) / 86400000);
+    if (daysIdle < STALL_IDLE_DAYS) return null;
+    return { daysIdle, dueDays };
+  }
+  function isStallDismissed(projectId) {
+    const map = state.stallDismissals || {};
+    const dismissedAt = map[projectId];
+    if (!dismissedAt) return false;
+    const ageMs = Date.now() - new Date(dismissedAt).getTime();
+    // Re-flag a week after a dismissal if the project's still stalled.
+    return ageMs < 7 * 86400000;
+  }
+  async function dismissStall(projectId) {
+    if (!projectId) return;
+    const nowIso = new Date().toISOString();
+    // Optimistic update + re-render
+    state.stallDismissals[projectId] = nowIso;
+    if (state.view === 'project-detail') renderProjectDetail();
+    else if (state.view === 'dashboard') { renderStats(); renderProjects(); }
+    showToast('Stall flag dismissed. Comes back if it stays quiet a week.', { durationMs: 2800 });
+    try {
+      await sbFetch('/course_stall_states', {
+        method: 'POST',
+        body: JSON.stringify({ project_id: projectId, dismissed_at: nowIso }),
+      });
+    } catch (err) {
+      console.warn('Persist stall dismissal failed:', err);
+    }
   }
 
   // — Morning Pulse —
@@ -3433,8 +3524,9 @@
         wantsAttention.push({ id: p.id, name: p.name, pillar: p.pillar, reason: `due in ${dueDays}d`, kind: 'risk' });
         return;
       }
-      if (daysSinceActivity !== null && daysSinceActivity > 7 && dueDays !== null && dueDays >= 0 && dueDays < 30) {
-        wantsAttention.push({ id: p.id, name: p.name, pillar: p.pillar, reason: `quiet ${daysSinceActivity}d`, kind: 'risk' });
+      const stall = getStallInfo(p);
+      if (stall && !isStallDismissed(p.id)) {
+        wantsAttention.push({ id: p.id, name: p.name, pillar: p.pillar, reason: `stalled ${stall.daysIdle}d`, kind: 'risk' });
         return;
       }
       if (daysSinceActivity !== null && daysSinceActivity <= 3) {
@@ -7289,6 +7381,9 @@ Output strict JSON array (no surrounding prose, no code fences):
 
     const currentStatus = p.status || 'active';
     const statusLabel = PROJECT_STATUS_TO_NOTION[currentStatus] || currentStatus;
+    const stall = getStallInfo(p);
+    const showStallBanner = !!stall && !isStallDismissed(p.id);
+    const lastMoveLabel = fmtRelativeTime(p.last_activity_at) || 'never';
 
     body.innerHTML = `
       <div class="lineage">
@@ -7301,6 +7396,16 @@ Output strict JSON array (no surrounding prose, no code fences):
           ${escapeHtml(statusLabel)}<span class="caret">▾</span>
         </button>
       </div>
+      ${showStallBanner ? `
+        <div class="stall-banner">
+          <div class="stall-banner-body">
+            <div class="stall-banner-label">Stalled</div>
+            <div class="stall-banner-text">Quiet ${stall.daysIdle} days · due in ${stall.dueDays}d</div>
+            <div class="stall-banner-meta">Last task moved ${lastMoveLabel}.</div>
+          </div>
+          <button class="stall-banner-dismiss" id="pd-stall-dismiss">Mark addressed</button>
+        </div>
+      ` : ''}
       ${d.statusPickerOpen ? `
         <div class="status-picker">
           ${PROJECT_STATUS_OPTIONS.map(s => `
@@ -8808,6 +8913,10 @@ Output strict JSON array (no surrounding prose, no code fences):
       generateNextMoves();
       return;
     }
+    if (e.target.closest('#pd-stall-dismiss')) {
+      dismissStall(state.detail.projectId);
+      return;
+    }
     const moveBtn = e.target.closest('.move-make[data-move-idx]');
     if (moveBtn) {
       const idx = Number(moveBtn.dataset.moveIdx);
@@ -8975,16 +9084,26 @@ Output strict JSON array (no surrounding prose, no code fences):
       return;
     }
     try {
-      const [projects, goals] = await Promise.all([
+      const [projects, goals, stalls] = await Promise.all([
         sbFetch('/course_projects?select=*&order=last_activity_at.desc'),
         sbFetch('/course_goals?select=*&order=created_at.asc'),
+        sbFetch('/course_stall_states?select=project_id,dismissed_at&dismissed_at=not.is.null&order=dismissed_at.desc'),
       ]);
       state.projects = projects || [];
       state.goals = goals || [];
+      // Most recent dismissal per project wins (fetch already sorted desc)
+      const dismissals = {};
+      (stalls || []).forEach(s => {
+        if (s.project_id && !dismissals[s.project_id]) {
+          dismissals[s.project_id] = s.dismissed_at;
+        }
+      });
+      state.stallDismissals = dismissals;
     } catch (err) {
       console.warn('Boot fetch failed:', err);
       state.projects = [];
       state.goals = [];
+      state.stallDismissals = {};
     }
     renderGoals();
     renderStats();

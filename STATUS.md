@@ -19,7 +19,7 @@ Course is usable end-to-end: Setup Flow ran, real Notion data is imported, Dashb
 | 7 | Morning Pulse + web push + expanded view | ⚠️ Partial — Claude-generated narrative + one question + wants-attention/on-pace lists, cached per-day to `course_pulses`. Web push notifications still deferred. |
 | 8 | Monday Open flow | ✅ Complete — walks Active projects one at a time, three questions each (Yes/Push/Drop · next move · day chips), Claude batch-suggests next moves, commits to `course_reviews` with per-project timestamped `decisions_json`. "Yes" decisions auto-create `course_tasks`; "Drop" sets project to Archived + Notion writeback. |
 | 9 | Friday Close + Still integration | ✅ Complete — Claude-written "The Read" narrative, computed Moved/Slipped sections, three textareas (drop/push-forward/surprised), Save-to-Still toggle that POSTs Q3 to Still's `reflections` table. "Review" link in dashboard header auto-routes by day of week (Mon-Thu → Open, Fri-Sun → Close); each flow has a "Switch to ___" link to swap manually. |
-| 10 | Stall detection logic | ❌ Not started |
+| 10 | Stall detection logic | ✅ Complete — `getStallInfo()` flags active projects with ≥7d idle + due within 30d. Dashboard rows show `!` + "Stalled Xd" in due column; At Risk stat count includes stalled. Project Detail shows a risk-bordered banner with last-move meta and a Mark addressed button that persists to `course_stall_states` and silences re-flagging for 7 days. Pulse `wants_attention` reason now reads "stalled Xd". |
 | 11 | Selective Notion import (paste-URL) | ❌ Not started |
 | 12 | Goals strip refinement + Pillar color settings | ❌ Not started |
 | 13 | Cross-app reads (Still, Tick) | ❌ V1.1+ |
