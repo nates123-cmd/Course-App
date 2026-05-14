@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#1c1814" />
 <link rel="manifest" href="./manifest.json" />
 <title>Course</title>
@@ -126,6 +126,15 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Lock horizontal motion + pinch zoom at the document level. Inner
+     elements (goals-scroll, task swipes) declare their own touch-action
+     so they still scroll/swipe normally. */
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
 
   body {
     background: var(--bg);
