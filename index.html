@@ -8460,12 +8460,13 @@ Output strict JSON array (no surrounding prose, no code fences):
     const deeplink = buildRemindersDeeplink(task);
     // Open the shortcut. On non-iOS this is a no-op visually but still safe.
     window.location.href = deeplink;
-    // Mark sent optimistically — there's no callback from Shortcuts back to web.
+    // Mark sent optimistically + auto-flip status to 'pushed' (Reminders is
+    // the worry list now — task drops off Course's active surfaces).
     const marker = `shortcut-${Date.now()}`;
     try {
       const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ reminders_uuid: marker }),
+        body: JSON.stringify({ reminders_uuid: marker, status: 'pushed' }),
       });
       const row = updated && updated[0];
       if (row) {
@@ -8476,6 +8477,10 @@ Output strict JSON array (no surrounding prose, no code fences):
         });
         if (state.taskSheet.open && state.taskSheet.taskId === taskId) renderTaskSheet();
       }
+      writebackTaskStatus(task.notion_url, 'pushed');
+      // Refresh underlying views since the task may have dropped from open lists
+      if (state.view === 'project-detail') renderPdTasks();
+      if (state.view === 'dashboard' && state.mode === 'tasks') { renderStats(); renderTasksMode(); }
     } catch (err) {
       console.warn('Mark sent failed:', err);
     }
@@ -8587,15 +8592,10 @@ Output strict JSON array (no surrounding prose, no code fences):
       <div class="task-sheet-section">
         <div class="meta-label">Reminders</div>
         ${task.reminders_uuid
-          ? `<div class="task-sheet-hint" style="margin-bottom: var(--sp-8); color: var(--good);">✓ Sent to Reminders.</div>
-             <div style="display: flex; gap: var(--sp-8);">
-               <button class="nav-btn" id="task-sheet-send-reminders">Re-send</button>
-               ${task.status === 'pushed'
-                 ? `<button class="nav-btn" disabled style="color: var(--good);">✓ Pushed</button>`
-                 : `<button class="nav-btn" id="task-sheet-mark-pushed">Mark Pushed</button>`}
-             </div>`
+          ? `<div class="task-sheet-hint" style="margin-bottom: var(--sp-8); color: var(--good);">✓ Sent · marked Pushed.</div>
+             <button class="nav-btn" id="task-sheet-send-reminders">Re-send</button>`
           : `<button class="nav-btn" id="task-sheet-send-reminders">Send to Reminders</button>
-             <div class="task-sheet-hint" style="margin-top: var(--sp-6);">Opens the <b>CourseAddReminder</b> Shortcut on iOS. See Settings → Reminders sync for setup.</div>`}
+             <div class="task-sheet-hint" style="margin-top: var(--sp-6);">Sends the task to Apple Reminders and marks it Pushed in Course.</div>`}
       </div>
       <div class="task-sheet-section">
         <div class="meta-label">Notes</div>
@@ -10016,10 +10016,6 @@ Content-Type: application/json
     }
     if (e.target.closest('#task-sheet-send-reminders')) {
       sendTaskToReminders(state.taskSheet.taskId);
-      return;
-    }
-    if (e.target.closest('#task-sheet-mark-pushed')) {
-      saveTaskStatusFromSheet('pushed');
       return;
     }
   });
