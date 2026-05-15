@@ -154,9 +154,23 @@ Each day header includes:
 
 **Tasks within each day** — Date is the primary axis (user's workflow is date-driven). Under each day header, tasks render in two sub-groups:
 - **Unscoped** — tasks with no project, flat list first
-- **By project** — tasks grouped under a project header (Pillar dot + project name + count + sub-budget), clickable to jump to Project Detail.
+- **By project** — tasks grouped under a project header (Pillar dot + project name + count + sub-budget), clickable to jump to Project Detail. **Project sub-groups are ordered by the parent project's status** — active projects first, then routine / under_review / paused, then idea / others. Status is a first-class ordering dimension: a task under an Active project should sit above a task under a paused one, because that's the order attention should follow.
 
-Within each sub-group, tasks sort by `day_order ASC NULLS LAST, created_at ASC`. Drag-to-reorder is scoped to a single sub-group (drag won't move a task across sub-groups or across days; use swipe-push or task sheet for that).
+Within each sub-group, tasks sort by the current **sort key** (below); default is `day_order ASC NULLS LAST, created_at ASC` (manual order). Drag-to-reorder is scoped to a single sub-group and only meaningful under the manual sort (drag won't move a task across sub-groups or across days; use swipe-push or task sheet for that).
+
+**Always-visible dates.** Every task row shows its do/due date in the meta line, unconditionally — including rows whose date is today or overdue (previously the date was suppressed when it was "today/overdue" and only color-coded, which lost the actual date). Today = amber, overdue = risk, future = muted, but the date string itself always renders. The user reasons in dates; hiding them to save a few pixels was the wrong trade.
+
+**Section delineation.** Each day section ends with an explicit divider/footer so it's unambiguous where Today stops and Tomorrow begins (the old layout let sections blur together when one was long). The footer also restates the section's task count + budget.
+
+**Collapsible project sub-groups.** Each "by project" sub-group header is tap-to-collapse. Collapsed state is per-project, persisted client-side (`course_tasks_collapsed_projects` in localStorage), and applies across Today/Tomorrow/No-date so a project the user doesn't want to think about stays folded everywhere. Collapsed header still shows the count + budget so nothing is hidden silently.
+
+**Sort & Filter bar (spreadsheet-style).** A compact control row sits directly under the mode toggle in Tasks mode. The user thinks in sort/filter terms, so this is a first-class affordance, not a buried setting:
+
+- **Sort** — `Manual` (day_order, default) · `Due date` · `Pillar` · `Area` · `Project` · `Effort` · `Status`. Re-sorts *within* each sub-group (day grouping and project sub-grouping stay; the sort reorders rows inside them). Picking a non-Manual sort disables drag-reorder for that session (it'd be meaningless) and says so.
+- **Filter** — multi-select chips for `Pillar`, `Area`, and `Project status`. Active filters narrow which tasks render across all day sections; an active-filter summary ("Arrow · active only · 2 filters") shows with a one-tap Clear. Filtering never deletes or moves data — it's a view lens.
+- Sort + filter state persists in `state.tasksMode` (and to localStorage) so it survives navigation and reload. Clearing returns to Manual + no filters.
+
+This is the general principle: **wherever Course shows a list, sort and filter should be available rather than a fixed order.** Tasks mode is where it lands first because that's the densest list; Projects mode reuses the same pattern as it grows.
 
 ### Task row interactions (Tasks Mode)
 
@@ -168,6 +182,8 @@ Within each sub-group, tasks sort by `day_order ASC NULLS LAST, created_at ASC`.
 - **Swipe right** (>80px) → "Push to tomorrow" (sets `do_date`=tomorrow, clears `day_order`). 3-second undo toast.
 - **Swipe left** (>80px) → "Triage" (sets `status='triage'`). 3-second undo toast. Note: marking Done lives on the checkbox + the Task Sheet status picker; swipe-left isn't a second path for it.
 - Sub-threshold swipe snaps back. Vertical scroll passes through to the browser. Native click is suppressed for ~350ms after any gesture activates so taps don't double-fire.
+
+The **same swipe gestures (push / triage) also work on Project Detail's task rows** — the gesture layer is shared, not Tasks-mode-only. Swiping a task in a project's task list pushes or triages it identically, so the user never has to leave the project view just to defer a task.
 
 ### Task Sheet
 
@@ -192,9 +208,9 @@ What you see when you tap a project from the dashboard.
 
 **Back nav** — `‹ Projects` left, `Edit` + `Notion ↗` right. The Notion link deeplinks via stored `notion_url`.
 
-**Identity lineage** — Pillar dot + Pillar name + Work Area + Goal in one line, comma-separated by middle-dots.
+**Identity lineage** — Pillar dot + Pillar name + Work Area + Goal in one line, comma-separated by middle-dots. **Pillar and Area are inline-editable here**: tap the Pillar segment → chip picker (the known pillars + any in use); tap the Area segment → datalist typeahead of existing areas (free text allowed). Saving PATCHes `course_projects.pillar` / `work_area` and calls `invalidateAreaPillarMap()` so every pillar-grouped surface re-resolves. Course-only — no Notion writeback for pillar/area (per the formalized Pillar/Area model, the Area→Pillar structure lives in Course's client-side map, not round-tripped to Notion relations). This is the missing counterpart to Monday Open's inline pillar pick: you can fix a project's tags from the project itself, not only mid-flow.
 
-**Project title** — Large (26px bold).
+**Project title** — Large (26px bold). **Inline-editable**: tap the title → input with Save/Cancel → PATCH `course_projects.name` + Notion title writeback (reuses `writebackProjectName`, the same path Monday Open's name edit uses). The old back-nav "Edit" affordance is no longer the only way to rename — the title itself is the control.
 
 **Status chip** — Sits between the title and the Definition of Done block. Shows the current status (Active / Idea / Paused / Routine / Under Review / Done / Archived) with a caret. Tap → inline chip picker appears below; tap an option → saves to `course_projects.status` and writes back to Notion's `Status` select. Active gets accent-color; Done gets sage; Paused/Archived are muted.
 
@@ -381,13 +397,13 @@ Note on the simplified type set: previous spec had 5 chip types (Project / Task 
 
 For when the user knows exactly what they're adding and where.
 
-- **Dashboard Projects mode**: small `+` next to the "Active Projects" section label → adds a project directly (skip type selection)
-- **Dashboard Tasks mode**: small `+` next to the "Today" day header → adds a task with do_date=today and project_id=null, user can assign project after
+- **Dashboard Projects mode**: an always-visible inline quick-add row pinned at the **top** of the project list — a single text input ("+ New project…") that creates an `status='active'` project on Enter and clears for the next one. No modal, no type picker. (Replaces the easy-to-miss small `+` on the section label as the primary path; the section affordance can stay as a secondary.)
+- **Dashboard Tasks mode**: each day section has its quick-add input surfaced at the **top of that section** (not hidden behind a `+` that has to be tapped first). Type a title, Enter → task with that section's `do_date`, `project_id=null`, ready for the next. Quick and inline is the default state, not a revealed one.
 - **Project Detail**: existing "Add a task" dashed button at the bottom of the task list adds a task scoped to that project (project_id pre-filled)
 - **Goals strip**: small `+` at the end of the horizontal scroll → adds a goal
 - **Capture inbox view** (when it exists): `+` to add an idea/thought directly without going through quick capture
 
-All contextual adds skip the type selector since context declares the type. They use inline input rather than a modal where possible — less interruption.
+All contextual adds skip the type selector since context declares the type. They use inline input rather than a modal where possible — less interruption. The guiding rule: a quick-add should be **visible and one keystroke away at the top of the list it adds to**, not a disclosure the user has to find.
 
 ### Visual treatment
 
@@ -489,13 +505,28 @@ On entry: Claude batch-classifies all pending items in a single call, returning 
 Each card is editable:
 - Type dropdown (project / task / goal / note)
 - Title input
-- Project dropdown (shown only when type=task)
+- Area dropdown (shown when type=task or project)
+- **Project dropdown** — shown when type=task (assigns the new task) **or type=note** (the note's destination, see below)
+- **Do date** (shown when type=task) — native date input; passed as `do_date` on Accept so a captured task can be scheduled at triage time instead of landing date-less and getting lost in the backlog
+- **Idea / Active toggle** (shown when type=project) — defaults to **Idea** (capture is for things not yet committed), but a captured project that's already real can be sent straight to `status='active'` without a detour through Monday Open's idea review. Answers "are new projects even captured?" — yes, and now visibly, with a clear destination state.
 - Accept → commits the entity (`course_projects`/`course_tasks`/`course_goals`) and marks the capture `processed`
 - Dismiss → marks the capture `dismissed`, no entity created
 
-Notes (`type=note`) don't create a separate row; they just close out the capture. V2 may route them as cross-app pushes to Still or similar.
+**Notes have a destination now.** A `type=note` capture shows the Project dropdown. On Accept, the capture's text is **appended to that project's `course_projects.notes`** (timestamped separator: a blank line + `— <date> —` + the text), so the note lands somewhere durable and reviewable instead of evaporating. This is the answer to "where do the notes go": into the chosen project's Notes block (visible in Project Detail). If no project is selected, Accept is blocked with a hint ("Pick a project for this note, or change the type / Dismiss") — a note with no home is the exact failure we're fixing, so the flow refuses to silently drop it. (V2 may add Still as an alternate destination; V1 keeps it to project notes.)
 
 Entry points for capture itself are defined in [Adding Things](#adding-things--capture-and-contextual-add).
+
+### Search
+
+A **Search** affordance lives in the dashboard header (alongside Inbox / Review / History / Settings). Tapping it opens a full-view search overlay: a single query input and live results.
+
+- Query matches **project name**, **task title**, project **outcome/notes**, and task **notes** (case-insensitive substring). Debounced (~150ms).
+- Results are grouped: **Projects** then **Tasks**. Each project row shows pillar dot + name + status; each task row shows title + parent project + do-date.
+- Tap a project result → Project Detail. Tap a task result → Task Sheet (or its project's detail if scoped) — same destinations as everywhere else.
+- Search runs over already-loaded `state.projects` / tasks first for instant results, then backfills with a Supabase `ilike` query so archived/done items and not-yet-loaded tasks are findable too. Status is not filtered out — search reaches everything, including archived projects and done tasks (this is also the answer to "where did X go?": search finds it).
+- Escape / back closes and returns to the prior view.
+
+Search is deliberately a flat finder, not a filtered list view — the Sort & Filter bar handles "narrow the working set"; Search handles "jump straight to a known thing."
 
 ---
 

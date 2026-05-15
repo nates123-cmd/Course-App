@@ -155,10 +155,42 @@
   #monday-open-view,
   #friday-close-view,
   #setup-view,
+  #search-view,
   #capture-inbox-view {
     max-width: var(--reading-width);
     margin: 0 auto;
   }
+  .search-input-wrap { margin-bottom: var(--sp-12); }
+  #search-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-10);
+    padding: var(--sp-12) var(--sp-14);
+    color: var(--text);
+    font-size: var(--fs-16);
+    font-family: inherit;
+    outline: none;
+  }
+  #search-input:focus { border-color: var(--accent-dim); }
+  .search-hint { color: var(--text-faint); font-size: var(--fs-13); padding: var(--sp-16) var(--sp-4); font-style: italic; }
+  .search-group-label {
+    font-size: var(--fs-10); letter-spacing: var(--tr-wide-3);
+    text-transform: uppercase; color: var(--text-faint);
+    font-weight: 600; margin: var(--sp-14) var(--sp-4) var(--sp-6);
+  }
+  .search-result {
+    display: flex; align-items: center; gap: var(--sp-10);
+    background: var(--bg-elevated);
+    border-radius: var(--r-10);
+    padding: var(--sp-10) var(--sp-12);
+    margin-bottom: var(--sp-6);
+    cursor: pointer;
+  }
+  .search-result:hover { background: var(--bg-nested); }
+  .search-result-body { flex: 1; min-width: 0; }
+  .search-result-title { font-size: var(--fs-14); color: var(--text); }
+  .search-result-meta { font-size: var(--fs-11); color: var(--text-muted); margin-top: 2px; }
 
   /* Projects list becomes an auto-fill grid in Projects mode — single
      column on phone, more columns as the window widens. Tasks mode reuses
@@ -171,6 +203,21 @@
     gap: var(--sp-8);
   }
   #projects-list.grid-mode .project { margin-bottom: 0; }
+  #projects-list.grid-mode .proj-quick-add { grid-column: 1 / -1; }
+  .proj-quick-add { margin-bottom: var(--sp-4); }
+  .proj-quick-add input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-10);
+    padding: var(--sp-10) var(--sp-14);
+    color: var(--text);
+    font-size: var(--fs-14);
+    font-family: inherit;
+    outline: none;
+  }
+  .proj-quick-add input:focus { border-style: solid; border-color: var(--accent-dim); }
+  .proj-quick-add input::placeholder { color: var(--text-faint); }
   #projects-list:not(.grid-mode) {
     max-width: var(--reading-width);
     margin-left: auto;
@@ -820,6 +867,41 @@
     font-weight: 600;
   }
   .lineage .sep { color: var(--text-faint); }
+  .lineage .pd-lineage-edit { cursor: pointer; display: inline-flex; align-items: center; gap: var(--sp-4); border-radius: var(--r-4); padding: 2px 4px; }
+  .lineage .pd-lineage-edit:hover { background: var(--bg-nested); color: var(--accent); }
+  .lineage .pd-lineage-edit.muted { color: var(--text-faint); font-style: italic; }
+  .pd-inline-editor {
+    background: var(--bg-elevated);
+    border-radius: var(--r-10);
+    padding: var(--sp-10) var(--sp-12);
+    margin-bottom: var(--sp-12);
+    border-left: var(--sp-2) solid var(--accent-dim);
+  }
+  .pd-inline-editor-label {
+    font-size: var(--fs-10);
+    letter-spacing: var(--tr-wide-3);
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin-bottom: var(--sp-8);
+  }
+  .pd-chip-row { display: flex; flex-wrap: wrap; gap: var(--sp-6); }
+  .pd-name-edit { margin-bottom: var(--sp-14); }
+  .pd-name-input {
+    width: 100%;
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-8);
+    padding: var(--sp-8) var(--sp-12);
+    color: var(--text);
+    font-size: var(--fs-22);
+    font-weight: 700;
+    font-family: inherit;
+    outline: none;
+  }
+  .pd-name-input:focus { border-color: var(--accent-dim); }
+  .pd-name-display { cursor: pointer; }
+  .pd-name-display:hover { color: var(--accent); }
 
   .project-title {
     font-size: var(--fs-26);
@@ -1468,6 +1550,74 @@
     letter-spacing: 0;
     text-transform: none;
   }
+  .tasks-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-8);
+    flex-wrap: wrap;
+    padding: var(--sp-8) var(--sp-4) var(--sp-10);
+    margin-bottom: var(--sp-6);
+    border-bottom: 1px solid var(--border);
+  }
+  .tasks-sort { display: flex; align-items: center; gap: var(--sp-6); font-size: var(--fs-12); color: var(--text-muted); }
+  .tasks-sort select {
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text);
+    border-radius: var(--r-6);
+    padding: var(--sp-4) var(--sp-8);
+    font-size: var(--fs-12);
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+  }
+  .tasks-filter-toggle {
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-6);
+    padding: var(--sp-4) var(--sp-10);
+    font-size: var(--fs-12);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .tasks-filter-toggle.active { color: var(--accent); border-color: var(--accent-dim); }
+  .tasks-filter-summary { font-size: var(--fs-11); color: var(--text-muted); flex: 1; min-width: 80px; }
+  .tasks-clear-btn {
+    background: none; border: none; color: var(--accent);
+    font-size: var(--fs-11); cursor: pointer; font-family: inherit; padding: 0;
+  }
+  .tasks-filter-panel {
+    background: var(--bg-elevated);
+    border-radius: var(--r-10);
+    padding: var(--sp-10) var(--sp-12);
+    margin-bottom: var(--sp-10);
+  }
+  .tasks-fl-group { margin-bottom: var(--sp-10); }
+  .tasks-fl-group:last-child { margin-bottom: 0; }
+  .tasks-fl-label {
+    font-size: var(--fs-10); letter-spacing: var(--tr-wide-3);
+    text-transform: uppercase; color: var(--text-faint);
+    font-weight: 600; margin-bottom: var(--sp-6);
+  }
+  .tasks-fl-chips { display: flex; flex-wrap: wrap; gap: var(--sp-6); }
+  .tasks-fl-chip {
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-6);
+    padding: var(--sp-4) var(--sp-10);
+    font-size: var(--fs-11);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .tasks-fl-chip.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .tasks-sort-note {
+    font-size: var(--fs-11);
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 0 var(--sp-4) var(--sp-10);
+  }
   .tasks-project-header {
     display: flex;
     align-items: center;
@@ -1482,6 +1632,31 @@
   }
   .tasks-project-header:hover { color: var(--text); }
   .tasks-project-header .pillar-dot { margin-right: 0; }
+  .tasks-project-caret {
+    cursor: pointer;
+    width: 14px;
+    text-align: center;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .tasks-project-caret:hover { color: var(--accent); }
+  .tasks-project-name { display: inline-flex; align-items: center; gap: var(--sp-6); cursor: pointer; flex: 1; }
+  .tasks-day-empty {
+    font-size: var(--fs-12);
+    color: var(--text-faint);
+    font-style: italic;
+    padding: var(--sp-8) var(--sp-4);
+  }
+  .tasks-day-footer {
+    text-align: center;
+    font-size: var(--fs-10);
+    letter-spacing: var(--tr-wide-2);
+    color: var(--text-faint);
+    padding: var(--sp-10) 0 var(--sp-6);
+    margin-top: var(--sp-6);
+    border-top: 1px dashed var(--border);
+  }
+  .do-date.muted { color: var(--text-faint); font-style: italic; }
 
   /* Day header: flex with budget + add button */
   .day-header-main { flex: 1; display: flex; align-items: baseline; gap: var(--sp-6); }
@@ -2161,6 +2336,20 @@
   }
   .capture-actions button.primary { background: var(--accent); color: var(--bg); }
   .capture-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .capture-status-toggle { display: flex; gap: var(--sp-6); }
+  .capture-status-opt {
+    flex: 1;
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-8);
+    padding: var(--sp-6) var(--sp-10);
+    font-size: var(--fs-12);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .capture-status-opt.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .capture-status-opt:disabled { opacity: 0.5; cursor: not-allowed; }
   .capture-inbox-empty {
     background: var(--bg-elevated);
     border-radius: var(--r-14);
@@ -3248,6 +3437,7 @@
 <div class="header">
   <div class="app-name">Course</div>
   <div class="util">
+    <span id="search-link">Search</span>
     <span class="inbox-link muted" id="inbox-link">Inbox</span>
     <span data-route="review">Review</span>
     <span data-route="history">History</span>
@@ -3337,6 +3527,17 @@
     <div class="header-actions"></div>
   </div>
   <div id="capture-inbox-body"></div>
+</div>
+
+<div id="search-view" style="display: none;">
+  <div class="back-row">
+    <div class="back-link" id="search-back"><span class="arrow">‹</span><span>Dashboard</span></div>
+    <div class="header-actions"></div>
+  </div>
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" placeholder="Search projects & tasks…" autocomplete="off" />
+  </div>
+  <div id="search-results"></div>
 </div>
 
 <div id="monday-open-view" style="display: none;">
@@ -3658,9 +3859,10 @@
     pillarColors: loadPillarColors(),
     setup: loadSetupState(),
     detail: { loading: false, projectId: null, project: null, tasks: [], goal: null, nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status' },
-    tasksMode: { tasks: null, loading: false, addingForDate: null },
+    tasksMode: { tasks: null, loading: false, addingForDate: null, sort: 'manual', filters: { pillar: [], area: [], pstatus: [] }, filterOpen: false },
     taskSheet: { open: false, taskId: null, statusPickerOpen: false, notesEditing: false },
     captureInbox: { loading: false, items: [], classifying: false, classifyError: null, pendingCount: 0 },
+    search: { query: '', projects: [], tasks: [], loading: false },
     mondayOpen: {
       loading: false,
       step: 0,
@@ -4185,9 +4387,11 @@
     list.classList.add('grid-mode');
     const active = state.projects.filter(p => p.status === 'active');
 
+    const quickAdd = `<div class="proj-quick-add"><input type="text" id="proj-quick-add-input" placeholder="+ New project…" autocomplete="off" /></div>`;
+
     if (active.length === 0) {
       list.classList.remove('grid-mode');
-      list.innerHTML = `
+      list.innerHTML = quickAdd + `
         <div class="empty-state">
           No active projects yet.<br/>
           <span class="accent">Import from Notion</span> to get started, or capture one below.
@@ -4195,7 +4399,7 @@
       return;
     }
 
-    list.innerHTML = active.map(p => {
+    list.innerHTML = quickAdd + active.map(p => {
       const days = daysUntil(p.due_date);
       const atRisk = days !== null && days < 7 && days >= 0;
       const overdue = days !== null && days < 0;
@@ -7125,11 +7329,12 @@ Output strict JSON array (no surrounding prose, no code fences):
       const titleInput = `
         <input class="capture-title-input" data-capture-title="${item.id}" value="${escapeHtml(item.title || '')}" placeholder="title" ${isDone ? 'disabled' : ''} />
       `;
-      const projectRow = item.type === 'task' ? `
+      // Project picker: shown for tasks (assignment) AND notes (destination).
+      const projectRow = (item.type === 'task' || item.type === 'note') ? `
         <div class="capture-item-row">
-          <span class="meta-label">Project</span>
+          <span class="meta-label">Project${item.type === 'note' ? ' (note goes here)' : ''}</span>
           <select class="capture-type-select" data-capture-project="${item.id}" ${isDone ? 'disabled' : ''}>
-            <option value="">— No project —</option>
+            <option value="">— ${item.type === 'note' ? 'Pick a project' : 'No project'} —</option>
             ${projectOptions.map(p => `<option value="${p.id}" ${item.project_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
           </select>
         </div>
@@ -7141,6 +7346,21 @@ Output strict JSON array (no surrounding prose, no code fences):
             <option value="">— No area —</option>
             ${workAreas.map(a => `<option value="${escapeHtml(a)}" ${item.work_area === a ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}
           </select>
+        </div>
+      ` : '';
+      const doDateRow = item.type === 'task' ? `
+        <div class="capture-item-row">
+          <span class="meta-label">Do date</span>
+          <input type="date" class="capture-type-select" data-capture-do-date="${item.id}" value="${item.do_date || ''}" ${isDone ? 'disabled' : ''} />
+        </div>
+      ` : '';
+      const statusRow = item.type === 'project' ? `
+        <div class="capture-item-row">
+          <span class="meta-label">As</span>
+          <div class="capture-status-toggle">
+            <button class="capture-status-opt ${(item.project_status || 'idea') === 'idea' ? 'selected' : ''}" data-capture-status="${item.id}" data-status-val="idea" ${isDone ? 'disabled' : ''}>Idea</button>
+            <button class="capture-status-opt ${item.project_status === 'active' ? 'selected' : ''}" data-capture-status="${item.id}" data-status-val="active" ${isDone ? 'disabled' : ''}>Active</button>
+          </div>
         </div>
       ` : '';
       const statusBadge = item.status === 'processed' ? '<span style="color: var(--good); font-size: var(--fs-11);">✓ Accepted</span>'
@@ -7159,6 +7379,8 @@ Output strict JSON array (no surrounding prose, no code fences):
           </div>
           ${projectRow}
           ${areaRow}
+          ${doDateRow}
+          ${statusRow}
           ${isDone ? `<div class="capture-actions">${statusBadge}</div>` : `
             <div class="capture-actions">
               <button data-capture-dismiss="${item.id}">Dismiss</button>
@@ -7176,7 +7398,12 @@ Output strict JSON array (no surrounding prose, no code fences):
     const item = state.captureInbox.items.find(x => x.id === captureId);
     if (!item || item.status !== 'reviewing') return;
     const title = (item.title || '').trim();
-    if (!title) { alert('Title cannot be empty.'); return; }
+    // Notes funnel into a project's notes; title isn't required for them.
+    if (item.type !== 'note' && !title) { alert('Title cannot be empty.'); return; }
+    if (item.type === 'note' && !item.project_id) {
+      alert('Pick a project for this note, or change the type / Dismiss.');
+      return;
+    }
     try {
       if (item.type === 'task') {
         const inserted = await sbFetch('/course_tasks', {
@@ -7186,23 +7413,46 @@ Output strict JSON array (no surrounding prose, no code fences):
             status: 'next',
             project_id: item.project_id || null,
             work_area: item.work_area || null,
+            do_date: item.do_date || null,
           }),
         });
         if (inserted && inserted[0] && state.tasksMode.tasks) state.tasksMode.tasks.push(inserted[0]);
       } else if (item.type === 'project') {
         const inserted = await sbFetch('/course_projects', {
           method: 'POST',
-          body: JSON.stringify({ name: title, status: 'idea', work_area: item.work_area || null }),
+          body: JSON.stringify({
+            name: title,
+            status: item.project_status === 'active' ? 'active' : 'idea',
+            work_area: item.work_area || null,
+          }),
         });
-        if (inserted && inserted[0]) state.projects.push(inserted[0]);
+        if (inserted && inserted[0]) { state.projects.push(inserted[0]); invalidateAreaPillarMap(); }
       } else if (item.type === 'goal') {
         const inserted = await sbFetch('/course_goals', {
           method: 'POST',
           body: JSON.stringify({ name: title, status: 'active' }),
         });
         if (inserted && inserted[0]) state.goals.push(inserted[0]);
+      } else if (item.type === 'note') {
+        // Append the captured text to the chosen project's notes, timestamped.
+        const proj = state.projects.find(p => p.id === item.project_id);
+        const noteText = (item.title || '').trim() || (item.raw_text || '').trim();
+        const stamp = `— ${fmtDue(localDateStr())} —`;
+        let existing = '';
+        try {
+          const rows = await sbFetch(`/course_projects?id=eq.${item.project_id}&select=notes`);
+          existing = (rows && rows[0] && rows[0].notes) || '';
+        } catch { existing = (proj && proj.notes) || ''; }
+        const appended = existing ? `${existing}\n\n${stamp}\n${noteText}` : `${stamp}\n${noteText}`;
+        const updated = await sbFetch(`/course_projects?id=eq.${item.project_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ notes: appended }),
+        });
+        if (proj) proj.notes = (updated && updated[0]) ? updated[0].notes : appended;
+        if (state.detail && state.detail.project && state.detail.project.id === item.project_id) {
+          state.detail.project.notes = proj ? proj.notes : appended;
+        }
       }
-      // 'note' — no separate row; just mark capture processed.
       await sbFetch(`/course_captures?id=eq.${captureId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'processed', processed_at: new Date().toISOString() }),
@@ -7235,6 +7485,96 @@ Output strict JSON array (no surrounding prose, no code fences):
     }
   }
 
+  // — Global search —
+  let _searchTimer = null;
+  function enterSearch() {
+    state.search = { query: '', projects: [], tasks: [], loading: false };
+    const input = document.getElementById('search-input');
+    if (input) input.value = '';
+    renderSearchResults();
+    setTimeout(() => { const i = document.getElementById('search-input'); if (i) i.focus(); }, 0);
+  }
+  function renderSearchResults() {
+    const el = document.getElementById('search-results');
+    if (!el) return;
+    const s = state.search || {};
+    const q = (s.query || '').trim();
+    if (!q) {
+      el.innerHTML = `<div class="search-hint">Type to search across every project and task — including archived and done.</div>`;
+      return;
+    }
+    if (s.loading && !s.projects.length && !s.tasks.length) {
+      el.innerHTML = `<div class="search-hint">Searching…</div>`;
+      return;
+    }
+    if (!s.projects.length && !s.tasks.length) {
+      el.innerHTML = `<div class="search-hint">No matches for “${escapeHtml(q)}”.</div>`;
+      return;
+    }
+    const projById = {};
+    state.projects.forEach(p => { projById[p.id] = p; });
+    const projHtml = s.projects.length ? `
+      <div class="search-group-label">Projects · ${s.projects.length}</div>
+      ${s.projects.map(p => `
+        <div class="search-result" data-search-project="${p.id}">
+          ${pillarDotHtml(effectivePillar(p)) || '<span class="pillar-dot"></span>'}
+          <div class="search-result-body">
+            <div class="search-result-title">${escapeHtml(p.name)}</div>
+            <div class="search-result-meta">${escapeHtml(PROJECT_STATUS_TO_NOTION[p.status] || p.status || '')}${p.work_area ? ' · ' + escapeHtml(p.work_area) : ''}</div>
+          </div>
+        </div>`).join('')}` : '';
+    const taskHtml = s.tasks.length ? `
+      <div class="search-group-label">Tasks · ${s.tasks.length}</div>
+      ${s.tasks.map(t => {
+        const proj = t.project_id ? projById[t.project_id] : null;
+        return `
+        <div class="search-result" data-search-task="${t.id}">
+          <span class="pillar-dot"></span>
+          <div class="search-result-body">
+            <div class="search-result-title">${escapeHtml(t.title)}</div>
+            <div class="search-result-meta">${proj ? escapeHtml(proj.name) : 'No project'}${t.do_date ? ' · ' + escapeHtml(fmtDue(t.do_date)) : ''}${t.status ? ' · ' + escapeHtml(t.status) : ''}</div>
+          </div>
+        </div>`;
+      }).join('')}` : '';
+    el.innerHTML = projHtml + taskHtml;
+  }
+  function runSearch(q) {
+    const query = q.trim().toLowerCase();
+    state.search = state.search || {};
+    state.search.query = q;
+    if (!query) { state.search.projects = []; state.search.tasks = []; renderSearchResults(); return; }
+    // Instant pass over already-loaded data
+    const matchP = p => [p.name, p.outcome, p.notes].some(v => v && v.toLowerCase().includes(query));
+    const matchT = t => [t.title, t.notes].some(v => v && v.toLowerCase().includes(query));
+    const projMap = new Map();
+    (state.projects || []).filter(matchP).forEach(p => projMap.set(p.id, p));
+    const taskMap = new Map();
+    ((state.tasksMode && state.tasksMode.tasks) || []).filter(matchT).forEach(t => taskMap.set(t.id, t));
+    state.search.projects = Array.from(projMap.values());
+    state.search.tasks = Array.from(taskMap.values());
+    state.search.loading = true;
+    renderSearchResults();
+    // Backfill from Supabase so archived/done/not-loaded rows are findable too
+    const enc = encodeURIComponent(`*${query}*`);
+    Promise.allSettled([
+      sbFetch(`/course_projects?select=*&or=(name.ilike.${enc},outcome.ilike.${enc},notes.ilike.${enc})&limit=40`),
+      sbFetch(`/course_tasks?select=*&or=(title.ilike.${enc},notes.ilike.${enc})&limit=60`),
+    ]).then(([pr, tr]) => {
+      // Ignore stale responses if the query changed meanwhile
+      if ((state.search.query || '').trim().toLowerCase() !== query) return;
+      if (pr.status === 'fulfilled' && Array.isArray(pr.value)) {
+        pr.value.forEach(p => { if (!projMap.has(p.id)) projMap.set(p.id, p); });
+      }
+      if (tr.status === 'fulfilled' && Array.isArray(tr.value)) {
+        tr.value.forEach(t => { if (!taskMap.has(t.id)) taskMap.set(t.id, t); });
+      }
+      state.search.projects = Array.from(projMap.values());
+      state.search.tasks = Array.from(taskMap.values());
+      state.search.loading = false;
+      renderSearchResults();
+    });
+  }
+
   async function updateInboxBadge() {
     const link = document.getElementById('inbox-link');
     if (!link) return;
@@ -7255,6 +7595,144 @@ Output strict JSON array (no surrounding prose, no code fences):
   const EFFORT_OPTIONS = ['15m', '30m', '1h', '2h+'];
   const EFFORT_MINUTES = { '15m': 15, '30m': 30, '1h': 60, '2h+': 120 };
   const WORK_TYPE_OPTIONS = ['deep', 'admin', 'scheduled'];
+
+  // Collapsed project sub-groups (Tasks mode) — keyed by project id, applies
+  // across Today/Tomorrow/No-date, persisted so a folded project stays folded.
+  const COLLAPSED_PROJECTS_KEY = 'course_tasks_collapsed_projects';
+  function getCollapsedProjects() {
+    try { return new Set(JSON.parse(localStorage.getItem(COLLAPSED_PROJECTS_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function toggleCollapsedProject(pid) {
+    const s = getCollapsedProjects();
+    if (s.has(pid)) s.delete(pid); else s.add(pid);
+    try { localStorage.setItem(COLLAPSED_PROJECTS_KEY, JSON.stringify(Array.from(s))); } catch {}
+  }
+
+  // — Tasks-mode sort & filter (spreadsheet-style) —
+  let _tasksPrefsLoaded = false;
+  const TASKS_PREFS_KEY = 'course_tasks_prefs';
+  const TASK_SORTS = [
+    ['manual', 'Manual'], ['due', 'Due date'], ['pillar', 'Pillar'],
+    ['area', 'Area'], ['project', 'Project'], ['effort', 'Effort'], ['status', 'Status'],
+  ];
+  function loadTasksPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem(TASKS_PREFS_KEY) || '{}');
+      if (p.sort) state.tasksMode.sort = p.sort;
+      if (p.filters) state.tasksMode.filters = {
+        pillar: p.filters.pillar || [], area: p.filters.area || [], pstatus: p.filters.pstatus || [],
+      };
+    } catch {}
+  }
+  function saveTasksPrefs() {
+    try {
+      localStorage.setItem(TASKS_PREFS_KEY, JSON.stringify({
+        sort: state.tasksMode.sort, filters: state.tasksMode.filters,
+      }));
+    } catch {}
+  }
+  function projectForTask(t) {
+    return t.project_id ? (state.projects || []).find(p => p.id === t.project_id) : null;
+  }
+  function taskPillar(t) {
+    const proj = projectForTask(t);
+    return effectivePillar(proj || { work_area: t.work_area }) || null;
+  }
+  function taskArea(t) {
+    const proj = projectForTask(t);
+    return (proj && proj.work_area) || t.work_area || null;
+  }
+  function tasksFiltersActive() {
+    const f = state.tasksMode.filters;
+    return (f.pillar.length + f.area.length + f.pstatus.length) > 0;
+  }
+  function taskPassesFilters(t) {
+    const f = state.tasksMode.filters;
+    if (f.pillar.length && !f.pillar.includes(taskPillar(t))) return false;
+    if (f.area.length && !f.area.includes(taskArea(t))) return false;
+    if (f.pstatus.length) {
+      const proj = projectForTask(t);
+      if (!proj || !f.pstatus.includes(proj.status)) return false;
+    }
+    return true;
+  }
+  const EFFORT_RANK = { '15m': 0, '30m': 1, '1h': 2, '2h+': 3 };
+  const TASK_STATUS_RANK = { in_progress: 0, next: 1, waiting: 2, triage: 3, pushed: 4 };
+  function taskSortComparator(sort) {
+    if (sort === 'manual') {
+      return (a, b) => {
+        const ao = a.day_order == null ? Infinity : a.day_order;
+        const bo = b.day_order == null ? Infinity : b.day_order;
+        if (ao !== bo) return ao - bo;
+        return (a.created_at || '').localeCompare(b.created_at || '');
+      };
+    }
+    if (sort === 'due') return (a, b) => (a.do_date || '9999').localeCompare(b.do_date || '9999');
+    if (sort === 'pillar') return (a, b) => (taskPillar(a) || '~').localeCompare(taskPillar(b) || '~');
+    if (sort === 'area') return (a, b) => (taskArea(a) || '~').localeCompare(taskArea(b) || '~');
+    if (sort === 'project') {
+      return (a, b) => {
+        const pa = projectForTask(a), pb = projectForTask(b);
+        return ((pa && pa.name) || '~').localeCompare((pb && pb.name) || '~');
+      };
+    }
+    if (sort === 'effort') return (a, b) => (EFFORT_RANK[a.effort] ?? 9) - (EFFORT_RANK[b.effort] ?? 9);
+    if (sort === 'status') return (a, b) => (TASK_STATUS_RANK[a.status] ?? 9) - (TASK_STATUS_RANK[b.status] ?? 9);
+    return () => 0;
+  }
+
+  // Sort & filter control row, rendered at the top of Tasks mode.
+  function tasksToolbarHtml(allTasks) {
+    const f = state.tasksMode.filters;
+    const sortLabel = (TASK_SORTS.find(s => s[0] === state.tasksMode.sort) || TASK_SORTS[0])[1];
+    // Build available filter values from the loaded task set
+    const pillars = Array.from(new Set(allTasks.map(taskPillar).filter(Boolean))).sort();
+    const areas = Array.from(new Set(allTasks.map(taskArea).filter(Boolean))).sort();
+    const statuses = Array.from(new Set(allTasks.map(t => { const p = projectForTask(t); return p && p.status; }).filter(Boolean)));
+    const STATUS_ORDER2 = ['active','routine','under_review','paused','idea','done','archived'];
+    statuses.sort((a, b) => STATUS_ORDER2.indexOf(a) - STATUS_ORDER2.indexOf(b));
+    const activeCount = f.pillar.length + f.area.length + f.pstatus.length;
+    const summary = activeCount
+      ? `<span class="tasks-filter-summary">${[
+          f.pillar.length ? f.pillar.join(', ') : '',
+          f.area.length ? f.area.join(', ') : '',
+          f.pstatus.length ? f.pstatus.join(', ') : '',
+        ].filter(Boolean).join(' · ')}</span><button class="tasks-clear-btn" data-tasks-clear-filters>Clear</button>`
+      : '';
+    const chip = (group, val, on) =>
+      `<button class="tasks-fl-chip ${on ? 'on' : ''}" data-tasks-filter="${group}" data-tasks-val="${escapeHtml(val)}">${escapeHtml(val)}</button>`;
+    const panel = state.tasksMode.filterOpen ? `
+      <div class="tasks-filter-panel">
+        ${pillars.length ? `<div class="tasks-fl-group"><div class="tasks-fl-label">Pillar</div><div class="tasks-fl-chips">${pillars.map(p => chip('pillar', p, f.pillar.includes(p))).join('')}</div></div>` : ''}
+        ${areas.length ? `<div class="tasks-fl-group"><div class="tasks-fl-label">Area</div><div class="tasks-fl-chips">${areas.map(a => chip('area', a, f.area.includes(a))).join('')}</div></div>` : ''}
+        ${statuses.length ? `<div class="tasks-fl-group"><div class="tasks-fl-label">Project status</div><div class="tasks-fl-chips">${statuses.map(s => chip('pstatus', s, f.pstatus.includes(s))).join('')}</div></div>` : ''}
+      </div>` : '';
+    return `
+      <div class="tasks-toolbar">
+        <label class="tasks-sort">
+          <span>Sort</span>
+          <select id="tasks-sort-select">
+            ${TASK_SORTS.map(([v, l]) => `<option value="${v}" ${state.tasksMode.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+        </label>
+        <button class="tasks-filter-toggle ${activeCount ? 'active' : ''}" data-tasks-filter-toggle>
+          Filter${activeCount ? ` (${activeCount})` : ''} ${state.tasksMode.filterOpen ? '▴' : '▾'}
+        </button>
+        ${summary}
+      </div>
+      ${panel}
+      ${state.tasksMode.sort !== 'manual' ? '<div class="tasks-sort-note">Sorted by ' + escapeHtml(sortLabel) + ' — drag-reorder is off until you switch back to Manual.</div>' : ''}
+    `;
+  }
+
+  // Order index for a project's status — active first, then warm, then cold.
+  const PROJECT_STATUS_ORDER = { active: 0, routine: 1, under_review: 2, paused: 3, idea: 4, done: 5, archived: 6 };
+  function projectStatusRank(pid) {
+    const p = (state.projects || []).find(x => x.id === pid);
+    const s = p ? p.status : null;
+    return (s && PROJECT_STATUS_ORDER[s] != null) ? PROJECT_STATUS_ORDER[s] : 9;
+  }
 
   async function fetchTasksForDashboard() {
     const rows = await sbFetch('/course_tasks?select=*&status=not.in.(done,dropped)&order=day_order.asc.nullslast,created_at.asc');
@@ -7282,7 +7760,11 @@ Output strict JSON array (no surrounding prose, no code fences):
       renderStats();
     }
 
-    const tasks = state.tasksMode.tasks;
+    if (!_tasksPrefsLoaded) { loadTasksPrefs(); _tasksPrefsLoaded = true; }
+
+    const allTasks = state.tasksMode.tasks;
+    const tasks = tasksFiltersActive() ? allTasks.filter(taskPassesFilters) : allTasks;
+    const cmp = taskSortComparator(state.tasksMode.sort);
     const today = localDateStr();
     const tomorrow = localDateStr(new Date(Date.now() + 86400000));
 
@@ -7292,6 +7774,8 @@ Output strict JSON array (no surrounding prose, no code fences):
       else if (t.do_date <= today) todayTasks.push(t);
       else if (t.do_date === tomorrow) tomorrowTasks.push(t);
     });
+    // Apply the chosen sort within each day bucket (sub-grouping preserves order)
+    [todayTasks, tomorrowTasks, noDateTasks].forEach(arr => arr.sort(cmp));
 
     const projectsById = {};
     state.projects.forEach(p => { projectsById[p.id] = p; });
@@ -7318,14 +7802,17 @@ Output strict JSON array (no surrounding prose, no code fences):
         workTypeHtml,
         effortHtml,
         driftHtml,
-        doLabel && !doCls ? `<span class="do-date">${escapeHtml(doLabel)}</span>` : '',
+        // Always show the date — color-coded (today/overdue/future) but never hidden
+        doLabel ? `<span class="do-date ${doCls}">${escapeHtml(doLabel)}</span>` : '<span class="do-date muted">no date</span>',
         t.person_dependency ? `<span>w/ ${escapeHtml(t.person_dependency)}</span>` : '',
       ].filter(Boolean).join('');
+      // Drag-reorder only under Manual sort (any other sort would fight the order)
+      const dragCls = state.tasksMode.sort === 'manual' ? ' draggable' : '';
       return `
         <div class="task-swipe-wrap" data-task-id="${t.id}">
           <div class="task-swipe-action push">→ Push</div>
           <div class="task-swipe-action triage">Triage ⚑</div>
-          <div class="task draggable" data-task-id="${t.id}">
+          <div class="task${dragCls}" data-task-id="${t.id}">
             <div class="task-check ${isDone ? 'done' : ''}" data-task-check="${t.id}"></div>
             <div class="task-body" data-task-body="${t.id}">
               <div class="task-title ${isDone ? 'done' : ''}">${escapeHtml(t.title)}</div>
@@ -7386,38 +7873,55 @@ Output strict JSON array (no surrounding prose, no code fences):
         }
       }
       const dayLabel = dateKey ? fmtDayLabel(label, dateKey) : label;
-      const addBtn = dateKey
-        ? `<button class="day-header-add ${addingOpen ? 'active' : ''}" data-add-for="${dateKey}" aria-label="Add task">+</button>`
-        : '';
+      // Today/Tomorrow always render so their quick-add is always available
+      const alwaysShow = dayClass === 'today' || dayClass === 'tomorrow';
       const unscopedHtml = unscoped.length
         ? `<div class="tasks-subgroup-unscoped" data-subgroup="unscoped:${dateKey || 'no-date'}">${unscoped.map(renderTaskRow).join('')}</div>`
         : '';
-      const projectHtml = Object.entries(byProject).map(([pid, ts]) => {
+      const collapsed = getCollapsedProjects();
+      // Project sub-groups ordered by parent project status (active first)
+      const projectEntries = Object.entries(byProject).sort((a, b) => {
+        const r = projectStatusRank(a[0]) - projectStatusRank(b[0]);
+        if (r !== 0) return r;
+        const an = (projectsById[a[0]] && projectsById[a[0]].name) || '';
+        const bn = (projectsById[b[0]] && projectsById[b[0]].name) || '';
+        return an.localeCompare(bn);
+      });
+      const projectHtml = projectEntries.map(([pid, ts]) => {
         const proj = projectsById[pid];
         const projName = proj ? proj.name : '(unknown project)';
         const dotHtml = proj ? pillarDotHtml(proj.pillar) : '';
         const subBudget = dayBudget(ts);
         const subBudgetHtml = subBudget ? ` · ${subBudget.label}` : '';
+        const isCollapsed = collapsed.has(pid);
+        const caret = isCollapsed ? '▸' : '▾';
         return `
-          <div class="tasks-project-header" data-jump-project="${pid}">${dotHtml}${escapeHtml(projName)}<span class="day-header-count">· ${ts.length}${subBudgetHtml}</span></div>
-          <div class="tasks-subgroup-project" data-subgroup="project:${pid}:${dateKey || 'no-date'}">${ts.map(renderTaskRow).join('')}</div>
+          <div class="tasks-project-header">
+            <span class="tasks-project-caret" data-collapse-project="${pid}">${caret}</span>
+            <span class="tasks-project-name" data-jump-project="${pid}">${dotHtml}${escapeHtml(projName)}</span>
+            <span class="day-header-count">· ${ts.length}${subBudgetHtml}</span>
+          </div>
+          ${isCollapsed ? '' : `<div class="tasks-subgroup-project" data-subgroup="project:${pid}:${dateKey || 'no-date'}">${ts.map(renderTaskRow).join('')}</div>`}
         `;
       }).join('');
-      const emptyState = !sectionTasks.length && !addingOpen
-        ? '' // hide entire section if empty AND not actively adding
-        : `${unscopedHtml}${projectHtml}`;
-      if (!sectionTasks.length && !addingOpen) return '';
+      if (!sectionTasks.length && !alwaysShow) return '';
+      const bodyContent = sectionTasks.length
+        ? `${unscopedHtml}${projectHtml}`
+        : '<div class="tasks-day-empty">Nothing here yet — add one above.</div>';
+      const footer = sectionTasks.length
+        ? `<div class="tasks-day-footer">— end of ${escapeHtml(label)} · ${sectionTasks.length} task${sectionTasks.length === 1 ? '' : 's'}${budget ? ` · ${budget.label}` : ''} —</div>`
+        : '';
       return `
         <section class="tasks-day-section" data-day="${dateKey || 'no-date'}">
           <div class="day-header ${dayClass}">
             <div class="day-header-main"><span>${escapeHtml(dayLabel)}</span><span class="day-header-count">· ${sectionTasks.length}</span>${budgetHtml}</div>
-            ${addBtn}
+          </div>
+          <div class="day-add-input-wrap open">
+            <input type="text" class="day-add-input" placeholder="+ Add to ${escapeHtml(label)}…" data-add-input-for="${dateKey || ''}" />
           </div>
           ${overloadHtml}
-          <div class="day-add-input-wrap ${addingOpen ? 'open' : ''}">
-            <input type="text" class="day-add-input" placeholder="Add a task…" data-add-input-for="${dateKey || ''}" />
-          </div>
-          ${emptyState}
+          ${bodyContent}
+          ${footer}
         </section>
       `;
     }
@@ -7426,14 +7930,16 @@ Output strict JSON array (no surrounding prose, no code fences):
                + renderDaySection('Tomorrow', tomorrowTasks, 'tomorrow', tomorrow)
                + (noDateTasks.length ? renderDaySection('No date', noDateTasks, 'no-date', null) : '');
 
-    if (!html) {
-      list.innerHTML = `<div class="empty-state">No open tasks for today, tomorrow, or unscheduled.<br/><span class="accent">Looks clear.</span></div>`;
-    } else {
-      list.innerHTML = html;
-    }
+    const toolbar = tasksToolbarHtml(allTasks);
+    const bodyHtml = html
+      ? html
+      : (tasksFiltersActive()
+          ? `<div class="empty-state">No tasks match the current filters.<br/><span class="accent" data-tasks-clear-filters>Clear filters</span></div>`
+          : `<div class="empty-state">No open tasks for today, tomorrow, or unscheduled.<br/><span class="accent">Looks clear.</span></div>`);
+    list.innerHTML = toolbar + bodyHtml;
 
-    // Attach gesture handlers to all draggable rows
-    list.querySelectorAll('.task.draggable').forEach(row => attachTaskGestures(row));
+    // Attach gesture handlers — swipe always works; drag is gated by .draggable
+    list.querySelectorAll('.task-swipe-wrap > .task').forEach(row => attachTaskGestures(row));
 
     // Auto-focus the open add input if any
     if (state.tasksMode.addingForDate) {
@@ -7506,9 +8012,25 @@ Output strict JSON array (no surrounding prose, no code fences):
   }
 
   // — Swipe actions: push to tomorrow / mark done —
+  // Collect every cached copy of a task (Tasks mode + Project Detail) so swipe
+  // actions work identically from either surface.
+  function taskRefs(taskId) {
+    const refs = [];
+    const a = (state.tasksMode && state.tasksMode.tasks) ? state.tasksMode.tasks.find(x => x.id === taskId) : null;
+    if (a) refs.push(a);
+    const b = (state.detail && state.detail.tasks) ? state.detail.tasks.find(x => x.id === taskId) : null;
+    if (b) refs.push(b);
+    return refs;
+  }
+  function rerenderTaskSurfaces() {
+    if (state.view === 'project-detail') renderPdTasks();
+    if (state.view === 'dashboard' && state.mode === 'tasks') { renderStats(); renderTasksMode(); }
+  }
+
   async function pushTaskToTomorrow(taskId) {
-    const t = (state.tasksMode.tasks || []).find(x => x.id === taskId);
-    if (!t) return;
+    const refs = taskRefs(taskId);
+    if (!refs.length) return;
+    const t = refs[0];
     const prevDate = t.do_date;
     const prevOrder = t.day_order;
     const prevCount = t.reschedule_count || 0;
@@ -7518,14 +8040,10 @@ Output strict JSON array (no surrounding prose, no code fences):
         method: 'PATCH',
         body: JSON.stringify({ do_date: tomorrow, day_order: null }),
       });
-      if (updated && updated[0]) Object.assign(t, updated[0]);
-      if (state.detail?.tasks) {
-        const dt = state.detail.tasks.find(x => x.id === taskId);
-        if (dt) Object.assign(dt, updated && updated[0] ? updated[0] : { do_date: tomorrow, day_order: null });
-      }
+      const patch = (updated && updated[0]) ? updated[0] : { do_date: tomorrow, day_order: null };
+      refs.forEach(r => Object.assign(r, patch));
       writebackTaskDoDate(t.notion_url, tomorrow);
-      renderStats();
-      renderTasksMode();
+      rerenderTaskSurfaces();
       showToast(`Pushed: ${t.title}`, {
         durationMs: 3000,
         undo: async () => {
@@ -7534,23 +8052,24 @@ Output strict JSON array (no surrounding prose, no code fences):
             method: 'PATCH',
             body: JSON.stringify({ do_date: prevDate, day_order: prevOrder, reschedule_count: prevCount }),
           });
-          if (undone && undone[0]) Object.assign(t, undone[0]);
+          const upatch = (undone && undone[0]) ? undone[0] : { do_date: prevDate, day_order: prevOrder, reschedule_count: prevCount };
+          refs.forEach(r => Object.assign(r, upatch));
           writebackTaskDoDate(t.notion_url, prevDate);
-          renderStats();
-          renderTasksMode();
+          rerenderTaskSurfaces();
         },
       });
     } catch (err) {
       console.warn('Push task failed:', err);
-      renderTasksMode();
+      rerenderTaskSurfaces();
     }
   }
 
   async function triageTaskFromSwipe(taskId) {
-    const t = (state.tasksMode.tasks || []).find(x => x.id === taskId);
-    if (!t) return;
+    const refs = taskRefs(taskId);
+    if (!refs.length) return;
+    const t = refs[0];
     if (t.status === 'triage') {
-      renderTasksMode();
+      rerenderTaskSurfaces();
       return;
     }
     const prevStatus = t.status;
@@ -7559,14 +8078,10 @@ Output strict JSON array (no surrounding prose, no code fences):
         method: 'PATCH',
         body: JSON.stringify({ status: 'triage' }),
       });
-      if (updated && updated[0]) Object.assign(t, updated[0]);
-      if (state.detail?.tasks) {
-        const dt = state.detail.tasks.find(x => x.id === taskId);
-        if (dt) Object.assign(dt, updated && updated[0] ? updated[0] : { status: 'triage' });
-      }
+      const patch = (updated && updated[0]) ? updated[0] : { status: 'triage' };
+      refs.forEach(r => Object.assign(r, patch));
       writebackTaskStatus(t.notion_url, 'triage');
-      renderStats();
-      renderTasksMode();
+      rerenderTaskSurfaces();
       showToast(`Triaged: ${t.title}`, {
         durationMs: 3000,
         undo: async () => {
@@ -7574,15 +8089,15 @@ Output strict JSON array (no surrounding prose, no code fences):
             method: 'PATCH',
             body: JSON.stringify({ status: prevStatus }),
           });
-          if (undone && undone[0]) Object.assign(t, undone[0]);
+          const upatch = (undone && undone[0]) ? undone[0] : { status: prevStatus };
+          refs.forEach(r => Object.assign(r, upatch));
           writebackTaskStatus(t.notion_url, prevStatus);
-          renderStats();
-          renderTasksMode();
+          rerenderTaskSurfaces();
         },
       });
     } catch (err) {
       console.warn('Triage from swipe failed:', err);
-      renderTasksMode();
+      rerenderTaskSurfaces();
     }
   }
 
@@ -7633,8 +8148,10 @@ Output strict JSON array (no surrounding prose, no code fences):
       dragStartY: 0,
     };
     row.classList.add('pressed');
-    // Long-press timer only for touch — on mouse, drag activates on first vertical move
-    if (source === 'touch') {
+    // Long-press timer only for touch — on mouse, drag activates on first vertical
+    // move. Drag-reorder only applies to rows explicitly marked .draggable
+    // (Tasks mode); Project Detail rows are swipe-only.
+    if (source === 'touch' && row.classList.contains('draggable')) {
       _activeGesture.pressTimer = setTimeout(() => {
         if (!_activeGesture || _activeGesture.row !== row) return;
         _activeGesture.mode = 'drag';
@@ -7675,8 +8192,9 @@ Output strict JSON array (no surrounding prose, no code fences):
         g.row.style.transform = `translateX(${dx}px)`;
         if (e && e.cancelable) e.preventDefault();
       } else {
-        // Vertical: drag on mouse (no scroll context), scroll on touch
-        if (g.source === 'mouse') {
+        // Vertical: drag on mouse (no scroll context), scroll on touch.
+        // Only .draggable rows (Tasks mode) reorder; PD rows fall through.
+        if (g.source === 'mouse' && g.row.classList.contains('draggable')) {
           g.mode = 'drag';
           g.dragStartY = g.startY;
           g.row.classList.add('dragging');
@@ -7888,6 +8406,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     document.getElementById('project-detail-view').style.display = view === 'project-detail' ? '' : 'none';
     document.getElementById('pulse-view').style.display = view === 'pulse' ? '' : 'none';
     document.getElementById('capture-inbox-view').style.display = view === 'capture-inbox' ? '' : 'none';
+    document.getElementById('search-view').style.display = view === 'search' ? '' : 'none';
     document.getElementById('monday-open-view').style.display = view === 'monday-open' ? '' : 'none';
     document.getElementById('friday-close-view').style.display = view === 'friday-close' ? '' : 'none';
     // Hide FAB on setup or weekly-review flows; keep visible elsewhere. Close menu/sheet on view change.
@@ -7907,6 +8426,7 @@ Output strict JSON array (no surrounding prose, no code fences):
       }
     }
     else if (view === 'capture-inbox') fetchCaptureInbox();
+    else if (view === 'search') enterSearch();
     else if (view === 'monday-open') enterMondayOpen();
     else if (view === 'friday-close') enterFridayClose();
     else if (view === 'dashboard') {
@@ -8821,6 +9341,7 @@ Output strict JSON array (no surrounding prose, no code fences):
       loading: true, projectId, project: null, tasks: [], goal: null,
       nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status',
       outcomeEditing: false, notesEditing: false, progressSliderOpen: false, statusPickerOpen: false,
+      nameEditing: false, pillarEditing: false, areaEditing: false,
     };
     renderProjectDetail();
     try {
@@ -8876,13 +9397,43 @@ Output strict JSON array (no surrounding prose, no code fences):
       notionLink.style.display = 'none';
     }
 
-    // Lineage
+    // Lineage — pillar + area are inline-editable
     const lineageParts = [];
-    if (p.pillar) {
-      lineageParts.push(`${pillarDotHtml(p.pillar)}<span class="pillar-name">${escapeHtml(p.pillar)}</span>`);
-    }
-    if (p.work_area) lineageParts.push(`<span>${escapeHtml(p.work_area)}</span>`);
+    lineageParts.push(p.pillar
+      ? `<span class="pd-lineage-edit" data-pd-edit-pillar="1" title="Tap to change pillar">${pillarDotHtml(p.pillar)}<span class="pillar-name">${escapeHtml(p.pillar)}</span></span>`
+      : `<span class="pd-lineage-edit muted" data-pd-edit-pillar="1" title="Set pillar">+ pillar</span>`);
+    lineageParts.push(p.work_area
+      ? `<span class="pd-lineage-edit" data-pd-edit-area="1" title="Tap to change area">${escapeHtml(p.work_area)}</span>`
+      : `<span class="pd-lineage-edit muted" data-pd-edit-area="1" title="Set area">+ area</span>`);
     if (d.goal) lineageParts.push(`<span>${escapeHtml(d.goal.name)}</span>`);
+
+    // Inline pillar / area editors (shown when their segment is tapped)
+    let lineageEditorHtml = '';
+    if (d.pillarEditing) {
+      const pillarSet = new Set(PILLAR_ORDER);
+      state.projects.forEach(x => { if (x.pillar) pillarSet.add(x.pillar); });
+      lineageEditorHtml = `
+        <div class="pd-inline-editor">
+          <div class="pd-inline-editor-label">Pillar</div>
+          <div class="pd-chip-row">
+            ${Array.from(pillarSet).map(pl => `<button class="chip ${p.pillar === pl ? 'selected' : ''}" data-pd-set-pillar="${escapeHtml(pl)}">${pillarDotHtml(pl)}${escapeHtml(pl)}</button>`).join('')}
+            ${p.pillar ? `<button class="chip" data-pd-set-pillar="">Clear</button>` : ''}
+            <button class="chip" data-pd-cancel-lineage>Cancel</button>
+          </div>
+        </div>`;
+    } else if (d.areaEditing) {
+      const areas = getWorkAreaOptions();
+      lineageEditorHtml = `
+        <div class="pd-inline-editor">
+          <div class="pd-inline-editor-label">Area</div>
+          <input type="text" id="pd-area-input" class="task-sheet-input" list="pd-area-dl" value="${escapeHtml(p.work_area || '')}" placeholder="Type or pick an area" />
+          <datalist id="pd-area-dl">${areas.map(a => `<option value="${escapeHtml(a)}"></option>`).join('')}</datalist>
+          <div class="pd-chip-row" style="margin-top: var(--sp-8);">
+            <button class="chip" data-pd-save-area>Save</button>
+            <button class="chip" data-pd-cancel-lineage>Cancel</button>
+          </div>
+        </div>`;
+    }
 
     // Meta cells
     const due = p.due_date ? fmtDue(p.due_date) : '—';
@@ -8911,9 +9462,17 @@ Output strict JSON array (no surrounding prose, no code fences):
     body.innerHTML = `
       <div class="lineage">
         ${lineageParts.join('<span class="sep">·</span>')}
-        ${lineageParts.length === 0 ? '<span class="muted">No tags</span>' : ''}
       </div>
-      <h1 class="project-title">${escapeHtml(p.name)}</h1>
+      ${lineageEditorHtml}
+      ${d.nameEditing
+        ? `<div class="pd-name-edit">
+             <input type="text" id="pd-name-input" class="pd-name-input" value="${escapeHtml(p.name)}" />
+             <div class="pd-chip-row" style="margin-top: var(--sp-8);">
+               <button class="chip" data-pd-save-name>Save</button>
+               <button class="chip" data-pd-cancel-name>Cancel</button>
+             </div>
+           </div>`
+        : `<h1 class="project-title pd-name-display" data-pd-edit-name="1" title="Tap to rename">${escapeHtml(p.name)}</h1>`}
       <div class="status-chip-row">
         <button class="status-chip" id="pd-status-btn" data-status="${currentStatus}">
           ${escapeHtml(statusLabel)}<span class="caret">▾</span>
@@ -9176,12 +9735,17 @@ Output strict JSON array (no surrounding prose, no code fences):
         doLabel ? `<span class="do-date ${doCls}">${escapeHtml(doLabel)}</span>` : '',
         t.person_dependency ? `<span>w/ ${escapeHtml(t.person_dependency)}</span>` : '',
       ].filter(Boolean).join('');
+      // Wrapped in the shared swipe layer (no .draggable → swipe-only, no reorder)
       return `
-        <div class="task" data-task-id="${t.id}">
-          <div class="task-check ${isDone ? 'done' : ''}" data-task-check="${t.id}"></div>
-          <div class="task-body">
-            <div class="task-title ${isDone ? 'done' : ''}">${escapeHtml(t.title)}</div>
-            ${meta ? `<div class="task-meta">${meta}</div>` : ''}
+        <div class="task-swipe-wrap" data-task-id="${t.id}">
+          <div class="task-swipe-action push">→ Push</div>
+          <div class="task-swipe-action triage">Triage ⚑</div>
+          <div class="task" data-task-id="${t.id}">
+            <div class="task-check ${isDone ? 'done' : ''}" data-task-check="${t.id}"></div>
+            <div class="task-body" data-task-body="${t.id}">
+              <div class="task-title ${isDone ? 'done' : ''}">${escapeHtml(t.title)}</div>
+              ${meta ? `<div class="task-meta">${meta}</div>` : ''}
+            </div>
           </div>
         </div>
       `;
@@ -9263,6 +9827,8 @@ Output strict JSON array (no surrounding prose, no code fences):
         </button>
       `;
     }
+    // Shared swipe gestures (push / triage) — same layer as Tasks mode
+    list.querySelectorAll('.task-swipe-wrap > .task').forEach(row => attachTaskGestures(row));
   }
 
   async function toggleTaskDone(taskId, opts = {}) {
@@ -9461,6 +10027,73 @@ Output strict JSON array (no surrounding prose, no code fences):
     }
   }
 
+  async function savePdName() {
+    const d = state.detail;
+    const input = document.getElementById('pd-name-input');
+    if (!input || !d.project) return;
+    const newName = input.value.trim();
+    if (!newName) { alert('Name is required.'); return; }
+    if (newName === d.project.name) { d.nameEditing = false; renderProjectDetail(); return; }
+    try {
+      const updated = await sbFetch(`/course_projects?id=eq.${d.projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName }),
+      });
+      if (updated && updated[0]) d.project = updated[0];
+      else d.project.name = newName;
+      const sp = state.projects.find(x => x.id === d.projectId);
+      if (sp) sp.name = d.project.name;
+      writebackProjectName(d.project.notion_url, newName);
+      d.nameEditing = false;
+      renderProjectDetail();
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    }
+  }
+
+  async function savePdPillar(pillar) {
+    const d = state.detail;
+    if (!d.project) return;
+    const value = pillar || null;
+    try {
+      const updated = await sbFetch(`/course_projects?id=eq.${d.projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pillar: value }),
+      });
+      if (updated && updated[0]) d.project = updated[0];
+      else d.project.pillar = value;
+      const sp = state.projects.find(x => x.id === d.projectId);
+      if (sp) sp.pillar = d.project.pillar;
+      invalidateAreaPillarMap();
+      d.pillarEditing = false;
+      renderProjectDetail();
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    }
+  }
+
+  async function savePdArea() {
+    const d = state.detail;
+    const input = document.getElementById('pd-area-input');
+    if (!input || !d.project) return;
+    const value = input.value.trim() || null;
+    try {
+      const updated = await sbFetch(`/course_projects?id=eq.${d.projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ work_area: value }),
+      });
+      if (updated && updated[0]) d.project = updated[0];
+      else d.project.work_area = value;
+      const sp = state.projects.find(x => x.id === d.projectId);
+      if (sp) sp.work_area = d.project.work_area;
+      invalidateAreaPillarMap();
+      d.areaEditing = false;
+      renderProjectDetail();
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    }
+  }
+
   // — Task Sheet (bottom-sheet editor) —
   const TASK_STATUS_OPTIONS = ['triage', 'next', 'in_progress', 'waiting', 'pushed', 'done', 'dropped'];
 
@@ -9485,6 +10118,10 @@ Output strict JSON array (no surrounding prose, no code fences):
         const t = state.mondayOpen.unscopedTasks.find(x => x.id === id);
         if (t) return t;
       }
+    }
+    if (state.search && Array.isArray(state.search.tasks)) {
+      const t = state.search.tasks.find(x => x.id === id);
+      if (t) return t;
     }
     return null;
   }
@@ -10834,6 +11471,24 @@ Content-Type: application/json
 
   // — Inbox link → capture inbox view —
   document.getElementById('inbox-link').addEventListener('click', () => showView('capture-inbox'));
+  document.getElementById('search-link').addEventListener('click', () => showView('search'));
+  document.getElementById('search-back').addEventListener('click', () => showView('dashboard'));
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (_searchTimer) clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => runSearch(v), 150);
+  });
+  document.getElementById('search-view').addEventListener('click', (e) => {
+    const pr = e.target.closest('[data-search-project]');
+    if (pr) { showView('project-detail', { projectId: pr.dataset.searchProject }); return; }
+    const tk = e.target.closest('[data-search-task]');
+    if (tk) {
+      const t = (state.search && state.search.tasks || []).find(x => x.id === tk.dataset.searchTask);
+      if (t && t.project_id) showView('project-detail', { projectId: t.project_id });
+      else openTaskSheet(tk.dataset.searchTask);
+      return;
+    }
+  });
 
   // — Review link → Mon–Thu opens Monday Open; Fri–Sun opens Friday Close —
   document.querySelectorAll('[data-route="review"]').forEach(el => {
@@ -11094,16 +11749,27 @@ Content-Type: application/json
     if (acc) { acceptCapture(acc.dataset.captureAccept); return; }
     const dis = e.target.closest('[data-capture-dismiss]');
     if (dis) { dismissCapture(dis.dataset.captureDismiss); return; }
+    const st = e.target.closest('[data-capture-status]');
+    if (st) {
+      const item = state.captureInbox.items.find(x => x.id === st.dataset.captureStatus);
+      if (item && item.status === 'reviewing') {
+        item.project_status = st.dataset.statusVal;
+        renderCaptureInbox();
+      }
+      return;
+    }
   });
   document.getElementById('capture-inbox-view').addEventListener('change', (e) => {
-    const id = e.target.dataset.captureType || e.target.dataset.captureProject;
+    const id = e.target.dataset.captureType || e.target.dataset.captureProject
+      || e.target.dataset.captureArea || e.target.dataset.captureDoDate;
     if (!id) return;
     const item = state.captureInbox.items.find(x => x.id === id);
     if (!item) return;
     if (e.target.dataset.captureType) item.type = e.target.value;
-    if (e.target.dataset.captureProject) item.project_id = e.target.value;
+    if (e.target.dataset.captureProject) item.project_id = e.target.value || null;
     if (e.target.dataset.captureArea) item.work_area = e.target.value || null;
-    // Re-render so project / area dropdowns appear/disappear when type toggles
+    if (e.target.dataset.captureDoDate) item.do_date = e.target.value || null;
+    // Re-render so project / area / date / status rows appear/disappear when type toggles
     if (e.target.dataset.captureType) renderCaptureInbox();
   });
   document.getElementById('capture-inbox-view').addEventListener('input', (e) => {
@@ -11172,6 +11838,29 @@ Content-Type: application/json
   // — Dashboard: clicks on project rows (Projects mode) and tasks (Tasks mode) —
   document.getElementById('projects-list').addEventListener('click', (e) => {
     if (_suppressNextClick) return;
+    // Tasks mode: sort & filter toolbar
+    if (e.target.closest('[data-tasks-filter-toggle]')) {
+      state.tasksMode.filterOpen = !state.tasksMode.filterOpen;
+      renderTasksMode();
+      return;
+    }
+    if (e.target.closest('[data-tasks-clear-filters]')) {
+      state.tasksMode.filters = { pillar: [], area: [], pstatus: [] };
+      saveTasksPrefs();
+      renderTasksMode();
+      return;
+    }
+    const flChip = e.target.closest('[data-tasks-filter]');
+    if (flChip) {
+      const grp = flChip.dataset.tasksFilter;
+      const val = flChip.dataset.tasksVal;
+      const arr = state.tasksMode.filters[grp];
+      const i = arr.indexOf(val);
+      if (i === -1) arr.push(val); else arr.splice(i, 1);
+      saveTasksPrefs();
+      renderTasksMode();
+      return;
+    }
     // Tasks mode: cycle work type
     const cycleWt = e.target.closest('[data-cycle-work-type]');
     if (cycleWt) {
@@ -11201,6 +11890,14 @@ Content-Type: application/json
       toggleTaskDone(check.dataset.taskCheck);
       return;
     }
+    // Tasks mode: collapse/expand a project sub-group
+    const collapseBtn = e.target.closest('[data-collapse-project]');
+    if (collapseBtn) {
+      e.stopPropagation();
+      toggleCollapsedProject(collapseBtn.dataset.collapseProject);
+      renderTasksMode();
+      return;
+    }
     // Tasks mode: project sub-header jumps to Project Detail
     const jump = e.target.closest('[data-jump-project]');
     if (jump) {
@@ -11226,8 +11923,44 @@ Content-Type: application/json
     }
   });
 
-  // — Tasks mode: inline add input (keydown for Enter / Escape) —
-  document.getElementById('projects-list').addEventListener('keydown', (e) => {
+  document.getElementById('projects-list').addEventListener('change', (e) => {
+    if (e.target.id === 'tasks-sort-select') {
+      state.tasksMode.sort = e.target.value;
+      saveTasksPrefs();
+      renderTasksMode();
+    }
+  });
+
+  // — Projects mode: inline quick-add (Enter creates an active project) —
+  document.getElementById('projects-list').addEventListener('keydown', async (e) => {
+    if (e.target.id === 'proj-quick-add-input') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const name = e.target.value.trim();
+        if (!name) return;
+        e.target.value = '';
+        try {
+          const inserted = await sbFetch('/course_projects', {
+            method: 'POST',
+            body: JSON.stringify({ name, status: 'active' }),
+          });
+          if (inserted && inserted[0]) {
+            state.projects.push(inserted[0]);
+            invalidateAreaPillarMap();
+            renderProjects();
+            renderStats();
+            renderPillarLegend();
+            const fresh = document.getElementById('proj-quick-add-input');
+            if (fresh) fresh.focus();
+            showToast(`Project added: ${inserted[0].name}`, { durationMs: 2000 });
+          }
+        } catch (err) {
+          console.warn('Quick-add project failed:', err);
+          alert('Failed to add project: ' + err.message);
+        }
+      }
+      return;
+    }
     const inp = e.target.closest('[data-add-input-for]');
     if (!inp) return;
     if (e.key === 'Enter') {
@@ -11330,6 +12063,9 @@ Content-Type: application/json
   // — Project Detail interactions (delegated since DOM re-renders) —
   document.getElementById('pd-back').addEventListener('click', () => showView('dashboard'));
   document.getElementById('project-detail-view').addEventListener('click', async (e) => {
+    // A just-completed swipe/drag suppresses the trailing click so a swiped
+    // task row doesn't also open the Task Sheet.
+    if (_suppressNextClick && e.target.closest('.task[data-task-id]')) return;
     if (e.target.closest('#pd-refresh-moves')) {
       generateNextMoves();
       return;
@@ -11415,6 +12151,48 @@ Content-Type: application/json
       saveProjectNotes();
       return;
     }
+    // Inline name edit
+    if (e.target.closest('[data-pd-edit-name]')) {
+      state.detail.nameEditing = true;
+      renderProjectDetail();
+      setTimeout(() => {
+        const inp = document.getElementById('pd-name-input');
+        if (inp) { inp.focus(); inp.select(); }
+      }, 0);
+      return;
+    }
+    if (e.target.closest('[data-pd-save-name]')) { savePdName(); return; }
+    if (e.target.closest('[data-pd-cancel-name]')) {
+      state.detail.nameEditing = false;
+      renderProjectDetail();
+      return;
+    }
+    // Inline pillar / area edit
+    if (e.target.closest('[data-pd-edit-pillar]')) {
+      state.detail.pillarEditing = true;
+      state.detail.areaEditing = false;
+      renderProjectDetail();
+      return;
+    }
+    if (e.target.closest('[data-pd-edit-area]')) {
+      state.detail.areaEditing = true;
+      state.detail.pillarEditing = false;
+      renderProjectDetail();
+      setTimeout(() => {
+        const inp = document.getElementById('pd-area-input');
+        if (inp) inp.focus();
+      }, 0);
+      return;
+    }
+    const setPillarBtn = e.target.closest('[data-pd-set-pillar]');
+    if (setPillarBtn) { savePdPillar(setPillarBtn.dataset.pdSetPillar); return; }
+    if (e.target.closest('[data-pd-save-area]')) { savePdArea(); return; }
+    if (e.target.closest('[data-pd-cancel-lineage]')) {
+      state.detail.pillarEditing = false;
+      state.detail.areaEditing = false;
+      renderProjectDetail();
+      return;
+    }
     if (e.target.closest('#pd-due-btn')) {
       const input = document.getElementById('pd-due-input');
       if (input) {
@@ -11483,6 +12261,16 @@ Content-Type: application/json
     }
   });
   document.getElementById('project-detail-view').addEventListener('keydown', async (e) => {
+    if (e.target.id === 'pd-name-input') {
+      if (e.key === 'Enter') { e.preventDefault(); savePdName(); }
+      else if (e.key === 'Escape') { e.preventDefault(); state.detail.nameEditing = false; renderProjectDetail(); }
+      return;
+    }
+    if (e.target.id === 'pd-area-input') {
+      if (e.key === 'Enter') { e.preventDefault(); savePdArea(); }
+      else if (e.key === 'Escape') { e.preventDefault(); state.detail.areaEditing = false; renderProjectDetail(); }
+      return;
+    }
     if (e.target.id !== 'pd-capture-input') return;
     if (e.key !== 'Enter') return;
     const text = e.target.value.trim();
