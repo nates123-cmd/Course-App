@@ -1,4 +1,4 @@
-const CACHE_NAME = 'course-v18';
+const CACHE_NAME = 'course-v19';
 const STATIC_ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -31,16 +31,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Stale-while-revalidate: serve the cached copy instantly (fast launch,
+  // works offline) AND fetch a fresh copy in the background to update the
+  // cache for next launch. Net effect: one close-and-reopen picks up a
+  // deploy, with no network wait on launch.
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
+      const networkFetch = fetch(request).then((response) => {
         if (response.ok && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-      });
+      }).catch(() => cached);
+      // Return cache immediately when present; otherwise wait on the network.
+      return cached || networkFetch;
     })
   );
 });
