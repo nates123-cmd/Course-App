@@ -1507,6 +1507,16 @@
   }
   .day-header-add:hover { color: var(--accent); background: var(--bg-elevated); }
   .day-header-add.active { color: var(--accent); }
+  .day-overload {
+    background: var(--bg-elevated);
+    border-left: var(--sp-3) solid var(--risk);
+    border-radius: var(--r-8);
+    padding: var(--sp-8) var(--sp-12);
+    margin: var(--sp-6) 0 var(--sp-10);
+    font-size: var(--fs-12);
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
 
   /* Inline add task input under day header */
   .day-add-input-wrap {
@@ -1803,6 +1813,39 @@
     font-variant-numeric: tabular-nums;
   }
   .task-sheet-date:focus { border-color: var(--accent-dim); }
+  .task-sheet-date-row { display: flex; align-items: center; gap: var(--sp-8); }
+  .task-sheet-clear-btn {
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-8);
+    padding: var(--sp-6) var(--sp-12);
+    color: var(--text-muted);
+    font-size: var(--fs-12);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .task-sheet-clear-btn:hover { color: var(--risk); border-color: var(--risk); }
+  .task-sheet-effort-row { display: flex; flex-wrap: wrap; gap: var(--sp-6); }
+  .task-sheet-effort-chip {
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-8);
+    padding: var(--sp-6) var(--sp-12);
+    color: var(--text-muted);
+    font-size: var(--fs-13);
+    font-family: inherit;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .task-sheet-effort-chip:hover { border-color: var(--accent-dim); color: var(--text); }
+  .task-sheet-effort-chip.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  .task-sheet-effort-chip.clear { color: var(--text-faint); }
+  .task-sheet-effort-chip.clear.selected { background: var(--bg-nested); color: var(--text-muted); border-color: var(--border); font-weight: 400; }
   .task-sheet-select, .task-sheet-input {
     width: 100%;
     background: var(--bg-elevated);
@@ -2331,71 +2374,133 @@
   }
   #monday-open-view .dod-edit-actions button.primary { background: var(--accent); color: var(--bg); }
 
+  /* Existing committed move: title + per-move date chip + actions */
   .mo-move-row {
     display: flex;
     align-items: flex-start;
     gap: var(--sp-6);
     margin-bottom: var(--sp-8);
-  }
-  .mo-move-row textarea {
-    flex: 1;
     background: var(--bg-elevated);
     border: var(--sp-1) solid var(--border);
     border-radius: var(--r-10);
-    padding: var(--sp-10) var(--sp-12);
+    padding: var(--sp-8) var(--sp-10);
+    flex-wrap: wrap;
+  }
+  .mo-move-row .mo-move-title {
+    flex: 1 1 100%;
+    background: transparent;
+    border: none;
     color: var(--text);
     font-size: var(--fs-14);
     font-family: inherit;
     line-height: 1.35;
     resize: vertical;
-    min-height: 44px;
+    min-height: 32px;
     outline: none;
+    padding: 0;
   }
-  .mo-move-row textarea:focus { border-color: var(--accent-dim); }
-  .mo-move-row button.remove {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: var(--fs-16);
-    cursor: pointer;
-    padding: var(--sp-6) var(--sp-8);
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .mo-move-row button.remove:hover { color: var(--risk); }
-  .mo-move-actions {
+  .mo-move-row .mo-move-meta {
     display: flex;
-    gap: var(--sp-8);
-    margin-top: var(--sp-4);
+    gap: var(--sp-6);
+    align-items: center;
     flex-wrap: wrap;
+    width: 100%;
+    margin-top: var(--sp-4);
   }
-  .mo-move-actions button {
-    background: var(--bg-elevated);
+  .mo-move-row .mo-move-date {
+    background: var(--bg-nested);
     border: var(--sp-1) solid var(--border);
     color: var(--text-muted);
     border-radius: var(--r-6);
-    padding: var(--sp-6) var(--sp-10);
-    font-size: var(--fs-12);
+    padding: var(--sp-3) var(--sp-8);
+    font-size: var(--fs-11);
+    cursor: pointer;
+    font-family: inherit;
+    position: relative;
+  }
+  .mo-move-row .mo-move-date.weekend { color: var(--accent); }
+  .mo-move-row .mo-move-date input[type="date"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border: 0;
+    padding: 0;
+  }
+  .mo-move-row .mo-move-reminder,
+  .mo-move-row .mo-move-remove {
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-6);
+    padding: var(--sp-3) var(--sp-8);
+    font-size: var(--fs-11);
     cursor: pointer;
     font-family: inherit;
   }
-  .mo-move-actions button:hover { color: var(--text); border-color: var(--accent-dim); }
-  .mo-brain-dump {
+  .mo-move-row .mo-move-reminder:hover,
+  .mo-move-row .mo-move-remove:hover { color: var(--text); }
+  .mo-move-row .mo-move-reminder.sent { color: var(--good); border-color: var(--good); }
+  .mo-move-row .mo-move-remove:hover { color: var(--risk); }
+  .mo-move-row .mo-move-spacer { flex: 1; }
+
+  /* Per-move date popover (chip picker shown when user taps the date chip) */
+  .mo-date-popover {
+    position: absolute;
+    top: calc(100% + var(--sp-4));
+    left: 0;
+    z-index: 50;
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-10);
+    padding: var(--sp-8);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4);
+    width: max-content;
+    max-width: 320px;
+  }
+  .mo-date-popover .day-pill {
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-6);
+    padding: var(--sp-4) var(--sp-8);
+    font-size: var(--fs-11);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mo-date-popover .day-pill.selected { background: var(--accent-dim); color: var(--bg); border-color: var(--accent-dim); }
+  .mo-date-popover .day-pill.weekend { color: var(--accent); }
+  .mo-date-popover label {
+    position: relative;
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-6);
+    padding: var(--sp-4) var(--sp-8);
+    font-size: var(--fs-11);
+    cursor: pointer;
+  }
+  .mo-date-popover label input[type="date"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border: 0;
+    padding: 0;
+  }
+
+  /* Unified composer — replaces "+ Add another" + "From paragraph" + brain-dump panel */
+  .mo-composer {
     background: var(--bg-elevated);
     border-radius: var(--r-12);
     padding: var(--sp-10) var(--sp-12);
     margin-top: var(--sp-10);
     border-left: var(--sp-2) solid var(--accent-dim);
   }
-  .mo-brain-dump-label {
-    font-size: var(--fs-10);
-    letter-spacing: var(--tr-wide-3);
-    color: var(--text-faint);
-    text-transform: uppercase;
-    font-weight: 500;
-    margin-bottom: var(--sp-6);
-  }
-  .mo-brain-dump textarea {
+  .mo-composer textarea {
     width: 100%;
     background: var(--bg-nested);
     border: var(--sp-1) solid var(--border);
@@ -2410,23 +2515,73 @@
     outline: none;
     margin-bottom: var(--sp-6);
   }
-  .mo-brain-dump .actions {
+  .mo-composer .actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--sp-6);
   }
-  .mo-brain-dump .actions button {
+  .mo-composer .actions button {
     background: var(--bg-nested);
-    border: none;
-    color: var(--text-muted);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text);
     border-radius: var(--r-6);
     padding: var(--sp-4) var(--sp-10);
-    font-size: var(--fs-11);
+    font-size: var(--fs-12);
     cursor: pointer;
     font-family: inherit;
   }
-  .mo-brain-dump .actions button.primary { background: var(--accent); color: var(--bg); }
-  .mo-brain-dump .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .mo-composer .actions button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .mo-composer .actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Decision-feedback notice (Push / Drop reassurance) */
+  .mo-decision-notice {
+    font-size: var(--fs-12);
+    color: var(--text-muted);
+    background: var(--bg-nested);
+    border-left: var(--sp-2) solid var(--accent-dim);
+    padding: var(--sp-8) var(--sp-12);
+    border-radius: var(--r-6);
+    margin-top: var(--sp-10);
+  }
+  .mo-decision-notice.drop { border-left-color: var(--risk); }
+  .mo-decision-notice.push { border-left-color: var(--accent); }
+
+  /* Inline editable project name */
+  #monday-open-view .project-card-name {
+    cursor: pointer;
+  }
+  #monday-open-view .project-card-name.editable:hover { background: var(--bg-nested); border-radius: var(--r-6); }
+  #monday-open-view .name-edit-input {
+    width: 100%;
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-6);
+    padding: var(--sp-6) var(--sp-10);
+    color: var(--text);
+    font-size: 22px;
+    font-weight: 700;
+    font-family: inherit;
+    outline: none;
+  }
+  #monday-open-view .name-edit-input:focus { border-color: var(--accent-dim); }
+  /* Inline editable due in state row */
+  #monday-open-view .project-card-state b.editable {
+    cursor: pointer;
+    border-bottom: 1px dashed var(--text-faint);
+  }
+  #monday-open-view .project-card-state b.editable:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  #monday-open-view .project-card-state .due-cell {
+    position: relative;
+    display: inline-block;
+  }
+  #monday-open-view .project-card-state .due-cell input[type="date"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border: 0;
+    padding: 0;
+  }
 
   .mo-existing-tasks {
     background: var(--bg-elevated);
@@ -2448,9 +2603,13 @@
     gap: var(--sp-8);
     font-size: var(--fs-12);
     color: var(--text-muted);
-    padding: var(--sp-4) 0;
+    padding: var(--sp-6) var(--sp-4);
     line-height: 1.4;
+    border-radius: var(--r-6);
+    cursor: pointer;
   }
+  .mo-existing-task:hover { background: var(--bg-nested); }
+  .mo-existing-task .task-do-date.muted { font-style: italic; color: var(--text-faint); }
   .mo-existing-task .task-status-pill {
     background: var(--bg-nested);
     padding: var(--sp-1) var(--sp-6);
@@ -2627,6 +2786,68 @@
     color: var(--text-muted);
     line-height: 1.5;
   }
+  .mo-add-project-btn {
+    width: 100%;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    border-radius: var(--r-10);
+    padding: var(--sp-10);
+    font-size: var(--fs-13);
+    font-family: inherit;
+    cursor: pointer;
+    margin: var(--sp-4) 0 var(--sp-12);
+  }
+  .mo-add-project-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .mo-add-project-form {
+    background: var(--bg-elevated);
+    border-radius: var(--r-12);
+    padding: var(--sp-14);
+    margin: var(--sp-4) 0 var(--sp-12);
+    border-left: var(--sp-2) solid var(--accent-dim);
+  }
+  .mo-add-project-label {
+    font-size: var(--fs-10);
+    letter-spacing: var(--tr-wide-3);
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin-bottom: var(--sp-8);
+  }
+  .mo-ap-chips { display: flex; flex-wrap: wrap; gap: var(--sp-6); }
+  .mo-ap-actions { display: flex; justify-content: flex-end; gap: var(--sp-8); margin-top: var(--sp-12); }
+  .mo-ap-actions button {
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text);
+    border-radius: var(--r-8);
+    padding: var(--sp-6) var(--sp-14);
+    font-size: var(--fs-13);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .mo-ap-actions button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .mo-ap-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .mo-idea-row {
+    background: var(--bg-elevated);
+    border-radius: var(--r-12);
+    padding: var(--sp-12) var(--sp-14);
+    margin-bottom: var(--sp-10);
+  }
+  .mo-idea-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-8);
+    margin-bottom: var(--sp-6);
+  }
+  .mo-idea-name { flex: 1; font-weight: 600; color: var(--text); font-size: var(--fs-15); }
+  .mo-idea-meta { font-size: var(--fs-11); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .mo-idea-outcome {
+    font-size: var(--fs-12);
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: var(--sp-10);
+  }
   .mo-section-banner {
     background: var(--bg-elevated);
     border-radius: var(--r-12);
@@ -2653,6 +2874,16 @@
     font-size: var(--fs-11);
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
+  }
+  .mo-decided-pill {
+    font-size: var(--fs-10);
+    letter-spacing: var(--tr-wide-3);
+    text-transform: uppercase;
+    color: var(--good);
+    background: rgba(138, 163, 101, 0.12);
+    padding: 2px var(--sp-6);
+    border-radius: var(--r-6);
+    font-weight: 600;
   }
   .mo-task-row {
     background: var(--bg-elevated);
@@ -3117,8 +3348,8 @@
   <div class="flow-label">Monday Open</div>
   <div class="switch-flow" id="mo-switch-flow">Switch to Friday Close ›</div>
   <div class="flow-title" id="mo-flow-title">Set the week</div>
-  <div class="flow-sub" id="mo-flow-sub">Walk through active projects. Three questions each. Skip what doesn't need a decision.</div>
   <div id="mo-body"></div>
+  <div id="mo-add-project"></div>
   <div class="bottom-actions">
     <button class="nav-btn" id="mo-back">‹ Back</button>
     <button class="nav-btn primary" id="mo-next">Next project ›</button>
@@ -3281,6 +3512,22 @@
       console.warn('Notion outcome writeback failed:', err);
     }
   }
+  async function writebackProjectName(notionUrl, name) {
+    const pageId = extractNotionPageId(notionUrl);
+    if (!pageId || !name) return;
+    try {
+      await efFetch('update_page', {
+        page_id: pageId,
+        body: {
+          properties: {
+            Name: { title: [{ type: 'text', text: { content: name } }] },
+          },
+        },
+      });
+    } catch (err) {
+      console.warn('Notion project name writeback failed:', err);
+    }
+  }
   async function writebackProjectDue(notionUrl, isoDate) {
     const pageId = extractNotionPageId(notionUrl);
     if (!pageId) return;
@@ -3412,7 +3659,7 @@
     setup: loadSetupState(),
     detail: { loading: false, projectId: null, project: null, tasks: [], goal: null, nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status' },
     tasksMode: { tasks: null, loading: false, addingForDate: null },
-    taskSheet: { open: false, taskId: null, statusPickerOpen: false },
+    taskSheet: { open: false, taskId: null, statusPickerOpen: false, notesEditing: false },
     captureInbox: { loading: false, items: [], classifying: false, classifyError: null, pendingCount: 0 },
     mondayOpen: {
       loading: false,
@@ -3461,6 +3708,7 @@
       stats: { done: 0, pushed: 0, dropped: 0 },
       moved: [],
       slipped: [],
+      unfinished: [],
       answers: { drop: '', pushForward: '', surprised: '' },
       pushToStill: true,
       reviewId: null,
@@ -4637,31 +4885,66 @@ Output strict JSON only, no code fences:
     return `${d.getMonth() + 1}/${d.getDate()}`;
   }
 
-  // The five "this week" chips: today + next 4 weekdays (skipping past today)
+  // First Monday on/after the 1st of the month containing `refDate`.
+  function firstMondayOfMonth(year, monthIdx) {
+    const d = new Date(year, monthIdx, 1);
+    const day = d.getDay(); // 0=Sun..6=Sat
+    const add = day === 1 ? 0 : (day === 0 ? 1 : (8 - day));
+    d.setDate(1 + add);
+    return d;
+  }
+
+  // Orphan-task review is monthly: active only on the first Monday Open of the
+  // calendar month. We detect "first of month" by checking whether a committed
+  // monday_open review row already exists for an earlier week in this month.
+  async function shouldReviewOrphansThisWeek(weekOfStr) {
+    const weekStart = parseLocalDate(weekOfStr);
+    const monthStart = localDateStr(new Date(weekStart.getFullYear(), weekStart.getMonth(), 1));
+    // Next month's first Monday — shown to the user when review is skipped.
+    const nm = new Date(weekStart.getFullYear(), weekStart.getMonth() + 1, 1);
+    const nextDate = localDateStr(firstMondayOfMonth(nm.getFullYear(), nm.getMonth()));
+    try {
+      const priorThisMonth = await sbFetch(
+        `/course_reviews?review_type=eq.monday_open&week_of=gte.${monthStart}&week_of=lt.${weekOfStr}&select=id&limit=1`
+      );
+      const active = !(priorThisMonth && priorThisMonth.length);
+      return { active, nextDate };
+    } catch (err) {
+      console.warn('Orphan cadence check failed — defaulting to active:', err);
+      return { active: true, nextDate };
+    }
+  }
+
+  // Day chips: Today + the next 6 calendar days (so the user always gets the full
+  // week including the weekend, instead of being forced to use "Other…" for Sat/Sun).
   function getMondayOpenDayChips() {
     const today = new Date();
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const todayDateStr = localDateStr(today);
     const chips = [{
       key: 'today',
       label: 'Today',
       shortDate: fmtShortDate(today),
-      date: localDateStr(today),
+      date: todayDateStr,
     }];
     let cursor = new Date(today);
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 6; i++) {
       cursor.setDate(cursor.getDate() + 1);
-      // Skip Sat/Sun
-      while (cursor.getDay() === 0 || cursor.getDay() === 6) {
-        cursor.setDate(cursor.getDate() + 1);
-      }
+      const dn = dayNames[cursor.getDay()];
       chips.push({
-        key: dayNames[cursor.getDay()].toLowerCase(),
-        label: dayNames[cursor.getDay()],
+        key: dn.toLowerCase(),
+        label: dn,
         shortDate: fmtShortDate(cursor),
         date: localDateStr(cursor),
+        isWeekend: cursor.getDay() === 0 || cursor.getDay() === 6,
       });
     }
     return chips;
+  }
+  // Lookup chip by date — used when rendering per-move date pickers
+  function dayChipForDate(isoDate, chips) {
+    if (!isoDate || !chips) return null;
+    return chips.find(c => c.date === isoDate) || null;
   }
 
   // — Monday Open draft persistence (localStorage, keyed by week) —
@@ -4678,6 +4961,8 @@ Output strict JSON only, no code fences:
       step: mo.step,
       decisions: mo.decisions,
       taskAssignments: mo.taskAssignments,
+      ideaDecisions: mo.ideaDecisions,
+      ideaCommitted: mo.ideaCommitted,
       savedAt: new Date().toISOString(),
     };
     try {
@@ -4701,27 +4986,69 @@ Output strict JSON only, no code fences:
   // Pillar order — Arrow (work) prioritized first
   const PILLAR_ORDER = ['Arrow', 'Sunny', 'Life'];
 
-  // Infer a task's pillar from its work_area by looking at any project sharing the area
+  // — Pillar vs Area: the formal hierarchy (see spec "Pillar vs Area") —
+  // Area belongs to exactly one Pillar. A project's effective pillar is derived
+  // from its Area via this map; the .pillar column is a denormalized cache.
+  // The map is authoritative and lives in exactly one place so every surface
+  // (dashboard grouping, Monday Open order, Pulse) resolves pillars identically.
+  const AREA_PILLAR_MAP_KEY = 'course_area_pillar_map';
+  let _areaPillarMapCache = null;
+  function buildAreaPillarMap() {
+    let map = {};
+    try {
+      const raw = localStorage.getItem(AREA_PILLAR_MAP_KEY);
+      if (raw) map = JSON.parse(raw) || {};
+    } catch {}
+    // Setup state is authoritative when present (each Area's chosen Pillar)
+    const s = state.setup;
+    if (s && s.areas && s.pillars) {
+      Object.values(s.areas).forEach(a => {
+        if (!a || !a.name) return;
+        const pillar = a.pillarId && s.pillars[a.pillarId] ? s.pillars[a.pillarId].name : null;
+        if (pillar) map[a.name] = pillar;
+      });
+    }
+    // Augment (don't override) from project rows — covers free-text areas
+    (state.projects || []).forEach(p => {
+      if (p.work_area && p.pillar && !map[p.work_area]) map[p.work_area] = p.pillar;
+    });
+    try { localStorage.setItem(AREA_PILLAR_MAP_KEY, JSON.stringify(map)); } catch {}
+    return map;
+  }
+  function areaPillarMap() {
+    if (!_areaPillarMapCache) _areaPillarMapCache = buildAreaPillarMap();
+    return _areaPillarMapCache;
+  }
+  function invalidateAreaPillarMap() { _areaPillarMapCache = null; }
+  // Single source of truth: the Pillar for a given Area name.
+  function pillarForArea(area) {
+    if (!area) return null;
+    return areaPillarMap()[area] || null;
+  }
+  // Effective pillar for a project/task: Area-derived wins, then explicit .pillar.
+  function effectivePillar(entity) {
+    if (!entity) return null;
+    return pillarForArea(entity.work_area || null) || entity.pillar || null;
+  }
+  // Back-compat alias — all callers route through the single helper now.
   function taskPillarFromArea(workArea) {
-    if (!workArea) return null;
-    const match = state.projects.find(p => p.work_area === workArea && p.pillar);
-    return match ? match.pillar : null;
+    return pillarForArea(workArea);
   }
 
   // Build the flat step list: per pillar, walk projects then any pillar-relevant
   // orphan tasks before moving to the next pillar. Unscoped-and-untagged tasks
   // get a final catch-all step. Summary always last.
-  function buildMondayOpenSteps(projects, unscopedTasks) {
+  function buildMondayOpenSteps(projects, unscopedTasks, ideaProjects) {
     const steps = [];
     const projectsByPillar = {};
     projects.forEach(p => {
-      const key = p.pillar || '__none__';
+      const key = effectivePillar(p) || '__none__';
       if (!projectsByPillar[key]) projectsByPillar[key] = [];
       projectsByPillar[key].push(p);
     });
     const tasksByPillar = {};
     unscopedTasks.forEach(t => {
-      const tp = taskPillarFromArea(t.work_area) || '__none__';
+      const tp = pillarForArea(t.work_area) || '__none__';
       if (!tasksByPillar[tp]) tasksByPillar[tp] = [];
       tasksByPillar[tp].push(t);
     });
@@ -4753,14 +5080,19 @@ Output strict JSON only, no code fences:
       steps.push({ type: 'tasks', pillar: null, taskIds: noPillarTasks.map(t => t.id) });
     }
 
+    // Lightweight idea-stage triage, after the active walk, before the summary.
+    if (ideaProjects && ideaProjects.length) {
+      steps.push({ type: 'idea_review', projectIds: ideaProjects.map(p => p.id) });
+    }
+
     steps.push({ type: 'summary' });
     return steps;
   }
 
   function sortProjectsForMondayOpen(projects) {
     return projects.slice().sort((a, b) => {
-      const ap = PILLAR_ORDER.indexOf(a.pillar || '');
-      const bp = PILLAR_ORDER.indexOf(b.pillar || '');
+      const ap = PILLAR_ORDER.indexOf(effectivePillar(a) || '');
+      const bp = PILLAR_ORDER.indexOf(effectivePillar(b) || '');
       const aOrder = ap === -1 ? PILLAR_ORDER.length : ap;
       const bOrder = bp === -1 ? PILLAR_ORDER.length : bp;
       if (aOrder !== bOrder) return aOrder - bOrder;
@@ -4769,6 +5101,90 @@ Output strict JSON only, no code fences:
       if (aArea !== bArea) return aArea.localeCompare(bArea);
       return (a.name || '').localeCompare(b.name || '');
     });
+  }
+
+  function moInitDecision(projectId) {
+    const todayChip = getMondayOpenDayChips()[0];
+    return {
+      project_id: projectId,
+      decision: 'yes',
+      move_rows: [],
+      composer: '',
+      composerLoading: false,
+      scheduled_day: todayChip.key,
+      defaultDate: todayChip.date,
+      timestamp: null,
+      editingOutcome: false,
+      outcomeDraft: '',
+      editingName: false,
+      nameDraft: '',
+      committedTaskIds: [],
+      committedStatusChange: null,
+    };
+  }
+
+  function moApCapture() {
+    const mo = state.mondayOpen;
+    if (!mo.addProjectOpen) return;
+    const d = mo.addProjectDraft || (mo.addProjectDraft = { name: '', outcome: '', pillar: '', work_area: '' });
+    const n = document.getElementById('mo-ap-name');
+    const o = document.getElementById('mo-ap-outcome');
+    const a = document.getElementById('mo-ap-area');
+    if (n) d.name = n.value;
+    if (o) d.outcome = o.value;
+    if (a) d.work_area = a.value;
+  }
+  function moOpenAddProject() {
+    state.mondayOpen.addProjectOpen = true;
+    state.mondayOpen.addProjectDraft = { name: '', outcome: '', pillar: '', work_area: '' };
+    renderMoAddProject();
+    setTimeout(() => { const el = document.getElementById('mo-ap-name'); if (el) el.focus(); }, 0);
+  }
+  function moCancelAddProject() {
+    state.mondayOpen.addProjectOpen = false;
+    state.mondayOpen.addProjectDraft = null;
+    renderMoAddProject();
+  }
+  async function moSaveAddProject() {
+    const mo = state.mondayOpen;
+    moApCapture();
+    const d = mo.addProjectDraft || {};
+    const name = (d.name || '').trim();
+    if (!name) { const el = document.getElementById('mo-ap-name'); if (el) el.focus(); return; }
+    mo.addProjectSaving = true;
+    renderMoAddProject();
+    try {
+      const row = {
+        name,
+        status: 'active',
+        outcome: (d.outcome || '').trim() || null,
+        pillar: d.pillar || null,
+        work_area: (d.work_area || '').trim() || null,
+      };
+      const inserted = await sbFetch('/course_projects', { method: 'POST', body: JSON.stringify(row) });
+      const np = inserted && inserted[0];
+      if (!np) throw new Error('Insert returned empty');
+      state.projects.push(np);
+      mo.decisions[np.id] = moInitDecision(np.id);
+      mo.projects = sortProjectsForMondayOpen(state.projects.filter(p => p.status === 'active'));
+      invalidateAreaPillarMap();
+      // Rebuild steps and jump to the new project's step
+      mo.steps = buildMondayOpenSteps(mo.projects, mo.unscopedTasks, mo.ideaProjects);
+      const idx = mo.steps.findIndex(s => s.type === 'project' && s.projectId === np.id);
+      if (idx !== -1) mo.step = idx;
+      mo.addProjectOpen = false;
+      mo.addProjectDraft = null;
+      mo.addProjectSaving = false;
+      saveMondayOpenDraft();
+      renderMondayOpen();
+      if (typeof generateMondayOpenSuggestions === 'function') generateMondayOpenSuggestions();
+      showToast(`Project added: ${np.name}`, { durationMs: 2500 });
+    } catch (err) {
+      console.warn('Add project from Monday Open failed:', err);
+      mo.addProjectSaving = false;
+      renderMoAddProject();
+      alert('Failed to add project: ' + err.message);
+    }
   }
 
   async function enterMondayOpen() {
@@ -4783,6 +5199,9 @@ Output strict JSON only, no code fences:
       taskSuggestions: {},
       taskSuggestionsLoading: false,
       taskAssignments: {},
+      ideaProjects: [],
+      ideaDecisions: {},        // projectId → 'activate' | 'keep' | 'drop'
+      ideaCommitted: {},        // projectId → applied status change (for idempotent re-commit)
       saving: false,
       saved: false,
       weekOf: getMondayOfWeek(),
@@ -4791,38 +5210,47 @@ Output strict JSON only, no code fences:
     try {
       const projects = sortProjectsForMondayOpen(state.projects.filter(p => p.status === 'active'));
       state.mondayOpen.projects = projects;
-
-      const todayChip = getMondayOpenDayChips()[0];
-      projects.forEach(p => {
-        state.mondayOpen.decisions[p.id] = {
-          project_id: p.id,
-          decision: 'yes',
-          next_moves: [''],
-          scheduled_day: todayChip.key,
-          timestamp: null,
-          editingOutcome: false,
-          outcomeDraft: '',
-          brainDumpOpen: false,
-          brainDumpLoading: false,
-          brainDumpText: '',
-          committedTaskIds: [],     // tasks Monday Open has created for this project
-          committedStatusChange: null, // 'archived' if we drop-archived; null otherwise
-        };
+      // Idea-stage projects get a lightweight triage step after the active walk
+      state.mondayOpen.ideaProjects = sortProjectsForMondayOpen(
+        state.projects.filter(p => p.status === 'idea')
+      );
+      state.mondayOpen.ideaProjects.forEach(p => {
+        state.mondayOpen.ideaDecisions[p.id] = 'keep';
       });
 
-      // Load open unscoped tasks for the final task-review step
-      try {
-        const unscoped = await sbFetch(`/course_tasks?select=id,title,status,do_date,work_area&project_id=is.null&status=not.in.(done,dropped)&order=do_date.asc.nullslast`);
-        state.mondayOpen.unscopedTasks = unscoped || [];
-        (unscoped || []).forEach(t => {
-          state.mondayOpen.taskAssignments[t.id] = { applied: false, project_id: null };
-        });
-      } catch (err) {
-        console.warn('Monday Open unscoped task fetch failed:', err);
+      projects.forEach(p => {
+        state.mondayOpen.decisions[p.id] = moInitDecision(p.id);
+      });
+
+      // Orphan-task review runs MONTHLY, not weekly: only on the first Monday
+      // Open of the calendar month. Reviewing every loose task every week is
+      // noise — most orphans are thin and belong in Reminders.
+      const orphanReview = await shouldReviewOrphansThisWeek(state.mondayOpen.weekOf);
+      state.mondayOpen.orphanReviewActive = orphanReview.active;
+      state.mondayOpen.orphanNextReviewDate = orphanReview.nextDate;
+      if (orphanReview.active) {
+        try {
+          const ORPHAN_CAP = 12;
+          // Oldest do_date first (nulls last), then most-rescheduled — the ones
+          // most likely genuinely stuck rather than just thin.
+          const unscoped = await sbFetch(`/course_tasks?select=id,title,status,do_date,work_area,reschedule_count&project_id=is.null&status=not.in.(done,dropped)&order=do_date.asc.nullslast,reschedule_count.desc`);
+          const capped = (unscoped || []).slice(0, ORPHAN_CAP);
+          state.mondayOpen.unscopedTasks = capped;
+          state.mondayOpen.orphanTotalCount = (unscoped || []).length;
+          capped.forEach(t => {
+            state.mondayOpen.taskAssignments[t.id] = { applied: false, project_id: null };
+          });
+        } catch (err) {
+          console.warn('Monday Open unscoped task fetch failed:', err);
+          state.mondayOpen.unscopedTasks = [];
+        }
+      } else {
+        state.mondayOpen.unscopedTasks = [];
+        state.mondayOpen.orphanTotalCount = 0;
       }
 
       // Build the interleaved steps array (projects per pillar, then pillar tasks, ...)
-      state.mondayOpen.steps = buildMondayOpenSteps(projects, state.mondayOpen.unscopedTasks);
+      state.mondayOpen.steps = buildMondayOpenSteps(projects, state.mondayOpen.unscopedTasks, state.mondayOpen.ideaProjects);
 
       // Restore any draft for this week — merge saved decisions/assignments over defaults
       const draft = loadMondayOpenDraft(state.mondayOpen.weekOf);
@@ -4832,10 +5260,21 @@ Output strict JSON only, no code fences:
         }
         if (draft.decisions && typeof draft.decisions === 'object') {
           Object.entries(draft.decisions).forEach(([pid, savedDecision]) => {
-            if (state.mondayOpen.decisions[pid]) {
-              // Merge: keep the structure we initialized but override saved fields
-              Object.assign(state.mondayOpen.decisions[pid], savedDecision);
+            if (!state.mondayOpen.decisions[pid]) return;
+            // Migrate legacy `next_moves: ['a', 'b']` + `scheduled_day` into
+            // the new `move_rows: [{title, do_date}]` shape on load.
+            const migrated = { ...savedDecision };
+            if (!Array.isArray(migrated.move_rows) && Array.isArray(migrated.next_moves)) {
+              const dayChips = getMondayOpenDayChips();
+              const legacyDate = dayChips.find(c => c.key === migrated.scheduled_day)?.date
+                || dayChips[0].date;
+              migrated.move_rows = migrated.next_moves
+                .map(s => (s || '').trim())
+                .filter(Boolean)
+                .map(title => ({ title, do_date: legacyDate, committedTaskId: null, remindersSent: false }));
+              delete migrated.next_moves;
             }
+            Object.assign(state.mondayOpen.decisions[pid], migrated);
           });
         }
         if (draft.taskAssignments && typeof draft.taskAssignments === 'object') {
@@ -4844,6 +5283,16 @@ Output strict JSON only, no code fences:
               Object.assign(state.mondayOpen.taskAssignments[tid], savedAssign);
             }
           });
+        }
+        if (draft.ideaDecisions && typeof draft.ideaDecisions === 'object') {
+          Object.entries(draft.ideaDecisions).forEach(([pid, choice]) => {
+            if (state.mondayOpen.ideaDecisions[pid] !== undefined) {
+              state.mondayOpen.ideaDecisions[pid] = choice;
+            }
+          });
+        }
+        if (draft.ideaCommitted && typeof draft.ideaCommitted === 'object') {
+          Object.assign(state.mondayOpen.ideaCommitted, draft.ideaCommitted);
         }
       }
 
@@ -4965,7 +5414,46 @@ Output strict JSON array, no surrounding prose, no code fences:
     }
   }
 
+  // "+ New project" affordance, lives below the step body, above the nav.
+  function renderMoAddProject() {
+    const host = document.getElementById('mo-add-project');
+    if (!host) return;
+    const mo = state.mondayOpen;
+    const curr = (mo.steps || [])[mo.step] || null;
+    // Hidden while loading, on the summary, and on the idea-review step.
+    if (mo.loading || !curr || curr.type === 'summary' || curr.type === 'idea_review') {
+      host.innerHTML = '';
+      return;
+    }
+    if (!mo.addProjectOpen) {
+      host.innerHTML = `<button class="mo-add-project-btn" id="mo-add-project-open">+ New project</button>`;
+      return;
+    }
+    const pillarSet = new Set(PILLAR_ORDER);
+    state.projects.forEach(p => { if (p.pillar) pillarSet.add(p.pillar); });
+    const pillars = Array.from(pillarSet);
+    const areas = getWorkAreaOptions();
+    const d = mo.addProjectDraft || { name: '', outcome: '', pillar: '', work_area: '' };
+    host.innerHTML = `
+      <div class="mo-add-project-form">
+        <div class="mo-add-project-label">New project</div>
+        <input type="text" id="mo-ap-name" class="task-sheet-input" placeholder="Project name" value="${escapeHtml(d.name || '')}" />
+        <textarea id="mo-ap-outcome" class="task-sheet-input" placeholder="Definition of Done (optional)" style="margin-top: var(--sp-8); min-height: 52px; resize: vertical;">${escapeHtml(d.outcome || '')}</textarea>
+        <div class="mo-ap-chips" style="margin-top: var(--sp-8);">
+          ${pillars.map(pl => `<button class="chip ${d.pillar === pl ? 'selected' : ''}" data-mo-ap-pillar="${escapeHtml(pl)}">${pillarDotHtml(pl)}${escapeHtml(pl)}</button>`).join('')}
+        </div>
+        <input type="text" id="mo-ap-area" class="task-sheet-input" list="mo-ap-area-dl" placeholder="Area (optional)" value="${escapeHtml(d.work_area || '')}" style="margin-top: var(--sp-8);" />
+        <datalist id="mo-ap-area-dl">${areas.map(a => `<option value="${escapeHtml(a)}"></option>`).join('')}</datalist>
+        <div class="mo-ap-actions">
+          <button id="mo-ap-cancel">Cancel</button>
+          <button class="primary" id="mo-ap-save"${mo.addProjectSaving ? ' disabled' : ''}>${mo.addProjectSaving ? 'Adding…' : 'Add & go'}</button>
+        </div>
+      </div>
+    `;
+  }
+
   function renderMondayOpen() {
+    renderMoAddProject();
     const body = document.getElementById('mo-body');
     if (!body) return;
     const mo = state.mondayOpen;
@@ -4976,6 +5464,7 @@ Output strict JSON array, no surrounding prose, no code fences:
     const isSummary = currentStep && currentStep.type === 'summary';
     const isTaskReview = currentStep && currentStep.type === 'tasks';
     const isProjectStep = currentStep && currentStep.type === 'project';
+    const isIdeaReview = currentStep && currentStep.type === 'idea_review';
     // Find the next step's type so we can pick the right button label
     const nextStep = steps[mo.step + 1] || null;
     const progressPct = totalSteps ? Math.round(((mo.step + 1) / totalSteps) * 100) : 0;
@@ -4985,6 +5474,7 @@ Output strict JSON array, no surrounding prose, no code fences:
       ? (mo.saving ? 'Saving…' : (mo.saved ? 'Done — back to dashboard' : 'Commit the week'))
       : (!nextStep ? 'Review →'
          : nextStep.type === 'summary' ? 'Review →'
+         : nextStep.type === 'idea_review' ? 'Review ideas →'
          : nextStep.type === 'tasks' ? `${nextStep.pillar || 'Orphan'} tasks →`
          : nextStep.type === 'project' && currentStep && currentStep.pillar !== nextStep.pillar
            ? `${nextStep.pillar || 'Next'} ›`
@@ -4995,9 +5485,44 @@ Output strict JSON array, no surrounding prose, no code fences:
       body.innerHTML = `<div class="loading">Loading active projects…</div>`;
       return;
     }
-    if (!totalProjects) {
-      document.getElementById('mo-step-meta').textContent = 'No active projects';
-      body.innerHTML = `<div class="empty-state">No active projects to walk through. Add or import some first.</div>`;
+    const hasReviewable = totalProjects > 0 || (mo.ideaProjects && mo.ideaProjects.length > 0);
+    if (!hasReviewable) {
+      document.getElementById('mo-step-meta').textContent = 'Nothing to review';
+      body.innerHTML = `<div class="empty-state">No active or idea projects to walk through. Add or import some first.</div>`;
+      return;
+    }
+
+    if (isIdeaReview) {
+      const ideaProjects = mo.ideaProjects || [];
+      document.getElementById('mo-step-meta').textContent = `Ideas · ${ideaProjects.length}`;
+      const rows = ideaProjects.map(p => {
+        const choice = mo.ideaDecisions[p.id] || 'keep';
+        const pill = effectivePillar(p);
+        const lastSeen = fmtRelativeTime(p.last_activity_at) || '—';
+        return `
+          <div class="mo-idea-row">
+            <div class="mo-idea-head">
+              ${pillarDotHtml(pill)}
+              <div class="mo-idea-name">${escapeHtml(p.name)}</div>
+              <div class="mo-idea-meta">${escapeHtml(lastSeen)}</div>
+            </div>
+            ${p.outcome ? `<div class="mo-idea-outcome">${escapeHtml(p.outcome)}</div>` : ''}
+            <div class="chip-row">
+              <button class="chip ${choice === 'activate' ? 'selected' : ''}" data-mo-idea="${p.id}" data-mo-idea-choice="activate">Activate</button>
+              <button class="chip ${choice === 'keep' ? 'selected' : ''}" data-mo-idea="${p.id}" data-mo-idea-choice="keep">Keep idea</button>
+              <button class="chip ${choice === 'drop' ? 'selected' : ''}" data-mo-idea="${p.id}" data-mo-idea-choice="drop">Drop</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      body.innerHTML = `
+        <div class="mo-section-banner">
+          <div><span class="pillar-label">Idea stage</span></div>
+          <span class="position">${ideaProjects.length} idea${ideaProjects.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="prompt-question" style="margin: 0 var(--sp-4) var(--sp-12);">Anything here ready to wake up?</div>
+        ${rows || '<div class="empty-state">No ideas on the backburner.</div>'}
+      `;
       return;
     }
 
@@ -5007,14 +5532,25 @@ Output strict JSON array, no surrounding prose, no code fences:
       const pushCount = Object.values(mo.decisions).filter(d => d.decision === 'push').length;
       const dropCount = Object.values(mo.decisions).filter(d => d.decision === 'drop').length;
       const scheduledCount = Object.values(mo.decisions)
-        .filter(d => d.decision === 'yes' && d.scheduled_day)
-        .reduce((sum, d) => sum + (d.next_moves || []).filter(m => m && m.trim()).length, 0);
+        .filter(d => d.decision === 'yes')
+        .reduce((sum, d) => sum + (d.move_rows || []).filter(m => m && m.title && m.title.trim()).length, 0);
       const taskMapCount = Object.values(mo.taskAssignments).filter(a => a.applied && a.project_id).length;
+      const ideaDec = mo.ideaDecisions || {};
+      const ideaActivate = Object.values(ideaDec).filter(v => v === 'activate').length;
+      const ideaDrop = Object.values(ideaDec).filter(v => v === 'drop').length;
+      const ideaLine = (ideaActivate || ideaDrop)
+        ? `<div class="mo-done-summary">${ideaActivate} idea${ideaActivate === 1 ? '' : 's'} activated · ${ideaDrop} dropped.</div>`
+        : '';
+      const orphanLine = mo.orphanReviewActive
+        ? ''
+        : `<div class="mo-done-summary" style="color: var(--text-faint);">Orphan task review is monthly — next on ${escapeHtml(fmtDue(mo.orphanNextReviewDate))}.</div>`;
       body.innerHTML = `
         <div class="mo-done-card">
           <div class="flow-label" style="color: var(--good);">Ready to commit</div>
           <h2 class="project-title" style="margin: var(--sp-8) 0 var(--sp-10);">${yesCount} forward · ${pushCount} pushed · ${dropCount} dropped</h2>
-          <div class="mo-done-summary">${scheduledCount} next-move task${scheduledCount === 1 ? '' : 's'} will be scheduled. ${taskMapCount > 0 ? `${taskMapCount} orphan task${taskMapCount === 1 ? '' : 's'} mapped to projects. ` : ''}Dropped projects will be set to Archived. Pushed projects stay active but tagged as pushed this week.</div>
+          <div class="mo-done-summary">${scheduledCount} next-move task${scheduledCount === 1 ? '' : 's'} will be scheduled. ${taskMapCount > 0 ? `${taskMapCount} orphan task${taskMapCount === 1 ? '' : 's'} mapped to projects. ` : ''}Dropped projects will be set to Archived. Pushed projects move to Ideas.</div>
+          ${ideaLine}
+          ${orphanLine}
         </div>
       `;
       return;
@@ -5093,14 +5629,19 @@ Output strict JSON array, no surrounding prose, no code fences:
       body.innerHTML = `<div class="empty-state">Project not found.</div>`;
       return;
     }
-    // Compute "Project N of M" for the project steps in the flat steps array
+    // Project step indices, used for the countdown ("X projects left, excluding this one")
     const projectStepIndices = steps
       .map((s, i) => s.type === 'project' ? i : -1)
       .filter(i => i !== -1);
     const projectIndexInWalk = projectStepIndices.indexOf(mo.step);
-    document.getElementById('mo-step-meta').textContent = `Project ${projectIndexInWalk + 1} of ${projectStepIndices.length}`;
+    const projectsLeft = projectStepIndices.length - (projectIndexInWalk + 1);
+    document.getElementById('mo-step-meta').textContent = projectsLeft === 0
+      ? `Last project`
+      : `${projectsLeft} project${projectsLeft === 1 ? '' : 's'} left`;
     const decision = mo.decisions[project.id];
     const dayChips = getMondayOpenDayChips();
+    // Has this project already been committed (user is back-navigating)?
+    const alreadyDecisioned = !!(decision && decision.timestamp);
 
     // Section banner — clear pillar / area context
     const sectionBanner = `
@@ -5109,7 +5650,10 @@ Output strict JSON array, no surrounding prose, no code fences:
           <span class="pillar-label">${escapeHtml(project.pillar || 'No pillar')}</span>
           ${project.work_area ? `<span class="area-label"> · ${escapeHtml(project.work_area)}</span>` : ''}
         </div>
-        <span class="position">${projectIndexInWalk + 1} of ${projectStepIndices.length}</span>
+        <div style="display: flex; gap: var(--sp-6); align-items: center;">
+          ${alreadyDecisioned ? `<span class="mo-decided-pill" title="Already committed — change to update">✓ decided</span>` : ''}
+          <span class="position">${projectIndexInWalk + 1} of ${projectStepIndices.length}</span>
+        </div>
       </div>
     `;
 
@@ -5119,7 +5663,14 @@ Output strict JSON array, no surrounding prose, no code fences:
     if (project.work_area) lineageParts.push(`<span>${escapeHtml(project.work_area)}</span>`);
 
     const dueDays = daysUntil(project.due_date);
-    const dueLabel = project.due_date ? `<b class="${dueDays !== null && dueDays < 7 ? 'risk' : ''}">${fmtDue(project.due_date)}${dueDays !== null && dueDays >= 0 && dueDays < 7 ? ` · ${dueDays}d` : ''}</b>` : `<b class="muted">no due</b>`;
+    const dueRiskClass = dueDays !== null && dueDays < 7 ? 'risk' : '';
+    const dueMutedClass = !project.due_date ? 'muted' : '';
+    const dueText = project.due_date
+      ? `${fmtDue(project.due_date)}${dueDays !== null && dueDays >= 0 && dueDays < 7 ? ` · ${dueDays}d` : ''}`
+      : 'no due';
+    // Wrap due as an inline-editable native date input. The transparent <input>
+    // sits on top of the visible label and captures the tap → opens the system picker.
+    const dueLabel = `<label class="due-cell"><b class="editable ${dueRiskClass} ${dueMutedClass}" id="mo-due-display-${project.id}">${escapeHtml(dueText)}</b><input type="date" id="mo-due-input-${project.id}" value="${project.due_date || ''}" data-mo-due-input="${project.id}" tabindex="-1" /></label>`;
     const pct = (project.progress_pct === null || project.progress_pct === undefined) ? null : project.progress_pct;
     const pctLabel = pct === null ? '—' : `${pct}%`;
     const lastActivity = fmtRelativeTime(project.last_activity_at) || '—';
@@ -5152,27 +5703,48 @@ Output strict JSON array, no surrounding prose, no code fences:
         ? `<div class="project-card-outcome editable" data-mo-dod-edit="${project.id}" title="Tap to edit">${escapeHtml(project.outcome)}</div>`
         : `<div class="project-card-outcome muted editable" data-mo-dod-edit="${project.id}">No Definition of Done set. Tap to add.</div>`;
 
-    // Next moves: render list of textareas with Add + brain-dump
-    const moves = decision.next_moves && decision.next_moves.length ? decision.next_moves : [''];
-    const movesHtml = moves.map((m, idx) => `
-      <div class="mo-move-row">
-        <textarea data-mo-move-input="${project.id}" data-mo-move-idx="${idx}" placeholder="${idx === 0 ? 'Or write your own…' : 'Another move…'}">${escapeHtml(m)}</textarea>
-        ${moves.length > 1 || m ? `<button class="remove" data-mo-move-remove="${project.id}" data-mo-move-idx="${idx}" aria-label="Remove">×</button>` : ''}
-      </div>
-    `).join('');
+    // Per-move rows: each move stored as { title, do_date, committedTaskId, remindersSent }
+    const moveRows = Array.isArray(decision.move_rows) ? decision.move_rows : [];
+    const movesHtml = moveRows.map((m, idx) => {
+      const chip = dayChipForDate(m.do_date, dayChips);
+      const dateLabel = chip ? `${chip.label} · ${chip.shortDate}` : (m.do_date ? fmtDue(m.do_date) : 'Set date');
+      const chipExtraClass = chip && chip.isWeekend ? ' weekend' : '';
+      const sentClass = m.remindersSent ? ' sent' : '';
+      const popoverOpen = decision.openDatePicker === idx;
+      const popoverHtml = popoverOpen ? `
+        <div class="mo-date-popover" data-mo-date-popover>
+          ${dayChips.map(c => `<button class="day-pill${m.do_date === c.date ? ' selected' : ''}${c.isWeekend ? ' weekend' : ''}" data-mo-move-date-pick="${project.id}" data-mo-move-idx="${idx}" data-mo-move-date="${c.date}">${escapeHtml(c.label)} ${escapeHtml(c.shortDate)}</button>`).join('')}
+          <label>Other…<input type="date" data-mo-move-date-other="${project.id}" data-mo-move-idx="${idx}" value="${m.do_date || ''}" /></label>
+        </div>
+      ` : '';
+      return `
+        <div class="mo-move-row">
+          <textarea class="mo-move-title" data-mo-move-input="${project.id}" data-mo-move-idx="${idx}" placeholder="Move text…" rows="1">${escapeHtml(m.title || '')}</textarea>
+          <div class="mo-move-meta">
+            <span class="mo-move-date${chipExtraClass}" data-mo-move-date-toggle="${project.id}" data-mo-move-idx="${idx}" role="button" tabindex="0">${escapeHtml(dateLabel)}${popoverHtml}</span>
+            <button class="mo-move-reminder${sentClass}" data-mo-move-reminder="${project.id}" data-mo-move-idx="${idx}" title="${m.remindersSent ? 'Already sent to Reminders' : 'Push to Apple Reminders'}">${m.remindersSent ? '✓ Sent' : '📲 Reminder'}</button>
+            <span class="mo-move-spacer"></span>
+            <button class="mo-move-remove" data-mo-move-remove="${project.id}" data-mo-move-idx="${idx}" aria-label="Remove">Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
 
-    const brainDumpHtml = decision.brainDumpOpen ? `
-      <div class="mo-brain-dump">
-        <div class="mo-brain-dump-label">Brain dump</div>
-        <textarea id="mo-brain-dump-${project.id}" placeholder="Write a paragraph or stream-of-thought — Claude will extract concrete next moves.">${escapeHtml(decision.brainDumpText || '')}</textarea>
+    // Unified composer at the bottom: one textarea, "+ Add" (one line → one move),
+    // "↻ Parse" (paragraph → Claude extracts multiple).
+    const composerLoading = !!decision.composerLoading;
+    const composerHtml = `
+      <div class="mo-composer">
+        <textarea id="mo-composer-${project.id}" placeholder="Type a next move and Add — or paste a paragraph and Parse to let Claude split it.">${escapeHtml(decision.composer || '')}</textarea>
         <div class="actions">
-          <button data-mo-brain-cancel="${project.id}"${decision.brainDumpLoading ? ' disabled' : ''}>Cancel</button>
-          <button class="primary" data-mo-brain-extract="${project.id}"${decision.brainDumpLoading ? ' disabled' : ''}>${decision.brainDumpLoading ? 'Extracting…' : 'Extract moves'}</button>
+          <button data-mo-composer-add="${project.id}"${composerLoading ? ' disabled' : ''}>+ Add</button>
+          <button class="primary" data-mo-composer-parse="${project.id}"${composerLoading ? ' disabled' : ''}>${composerLoading ? 'Parsing…' : '↻ Parse'}</button>
         </div>
       </div>
-    ` : '';
+    `;
 
-    // Existing open tasks for this project (cached by generateMondayOpenSuggestions)
+    // Existing open tasks for this project (cached by generateMondayOpenSuggestions).
+    // Row is tap-to-edit (opens Task Sheet); the checkbox still marks done in place.
     const openTasksForProject = (mo.tasksByProject && mo.tasksByProject[project.id]) || [];
     const tasksBlock = `
       <div class="mo-existing-tasks">
@@ -5180,12 +5752,15 @@ Output strict JSON array, no surrounding prose, no code fences:
         ${openTasksForProject.length
           ? openTasksForProject.map(t => {
               const isDone = t.status === 'done' || !!t.completed_date;
+              const dateHtml = t.do_date
+                ? `<span class="task-do-date">${escapeHtml(fmtDue(t.do_date))}</span>`
+                : `<span class="task-do-date muted">no date</span>`;
               return `
-                <div class="mo-existing-task">
+                <div class="mo-existing-task" data-mo-existing-task="${t.id}">
                   <div class="task-check ${isDone ? 'done' : ''}" data-mo-project-task-done="${t.id}" title="Mark done"></div>
                   <span class="task-status-pill">${escapeHtml(t.status)}</span>
                   <span class="task-title-text ${isDone ? 'done' : ''}">${escapeHtml(t.title)}</span>
-                  ${t.do_date ? `<span class="task-do-date">${escapeHtml(fmtDue(t.do_date))}</span>` : ''}
+                  ${dateHtml}
                 </div>
               `;
             }).join('')
@@ -5211,12 +5786,24 @@ Output strict JSON array, no surrounding prose, no code fences:
       `
       : '';
 
+    // Editable project name
+    const nameBlock = decision.editingName
+      ? `<input class="name-edit-input" id="mo-name-edit-${project.id}" value="${escapeHtml(decision.nameDraft != null ? decision.nameDraft : project.name)}" />`
+      : `<div class="project-card-name editable" data-mo-name-edit="${project.id}" title="Tap to edit">${escapeHtml(project.name)}</div>`;
+
+    // Push / Drop reassurance — gives clear feedback that the decision has an effect
+    const decisionNotice = decision.decision === 'push'
+      ? `<div class="mo-decision-notice push">On Next: <b>${escapeHtml(project.name)}</b> will move to <b>Ideas</b> (status: idea). It won't show on the active dashboard until you revive it.</div>`
+      : decision.decision === 'drop'
+        ? `<div class="mo-decision-notice drop">On Next: <b>${escapeHtml(project.name)}</b> will be <b>archived</b>. Notion will also be updated.</div>`
+        : '';
+
     body.innerHTML = `
       ${sectionBanner}
       ${pillarPickerHtml}
       <div class="project-card">
         <div class="lineage">${lineageParts.join('<span class="sep">·</span>')}</div>
-        <div class="project-card-name">${escapeHtml(project.name)}</div>
+        ${nameBlock}
         <div class="project-card-state">
           <span>${dueLabel}</span>
           <span><b>${pctLabel}</b> done</span>
@@ -5235,6 +5822,7 @@ Output strict JSON array, no surrounding prose, no code fences:
           <button class="chip ${decision.decision === 'push' ? 'selected' : ''}" data-mo-decision="push">Push</button>
           <button class="chip ${decision.decision === 'drop' ? 'selected' : ''}" data-mo-decision="drop">Drop</button>
         </div>
+        ${decisionNotice}
       </div>
 
       ${decision.decision === 'yes' ? `
@@ -5243,19 +5831,7 @@ Output strict JSON array, no surrounding prose, no code fences:
           <div class="prompt-question">Next moves this week</div>
           ${suggestionHtml}
           ${movesHtml}
-          <div class="mo-move-actions">
-            <button data-mo-move-add="${project.id}">+ Add another</button>
-            ${!decision.brainDumpOpen ? `<button data-mo-brain-open="${project.id}">📝 From paragraph</button>` : ''}
-          </div>
-          ${brainDumpHtml}
-        </div>
-
-        <div class="prompt-block">
-          <div class="prompt-label">Question 3</div>
-          <div class="prompt-question">When this week?</div>
-          <div class="when-row">
-            ${dayChips.map(c => `<button class="when-chip ${decision.scheduled_day === c.key ? 'selected' : ''}" data-mo-day="${c.key}">${escapeHtml(c.label)} <span style="opacity: 0.6; font-variant-numeric: tabular-nums;">${escapeHtml(c.shortDate)}</span></button>`).join('')}
-          </div>
+          ${composerHtml}
         </div>
       ` : ''}
     `;
@@ -5266,51 +5842,59 @@ Output strict JSON array, no surrounding prose, no code fences:
     saveMondayOpenDraft();
     renderMondayOpen();
   }
-  function moSetDay(projectId, day) {
-    state.mondayOpen.decisions[projectId].scheduled_day = day;
-    saveMondayOpenDraft();
-    renderMondayOpen();
+  function defaultMoveDate(d) {
+    if (d && d.defaultDate) return d.defaultDate;
+    const chips = getMondayOpenDayChips();
+    return chips[0].date;
+  }
+  function moEnsureMoveRows(d) {
+    if (!Array.isArray(d.move_rows)) d.move_rows = [];
+  }
+  function moAppendMove(projectId, title, do_date) {
+    const d = state.mondayOpen.decisions[projectId];
+    if (!d) return;
+    moEnsureMoveRows(d);
+    d.move_rows.push({
+      title: title || '',
+      do_date: do_date || defaultMoveDate(d),
+      committedTaskId: null,
+      remindersSent: false,
+    });
   }
   function moUseSuggestion(projectId) {
     const sug = state.mondayOpen.suggestions[projectId];
     if (!sug) return;
-    const d = state.mondayOpen.decisions[projectId];
     moCaptureCurrentNextMove();
-    const emptyIdx = (d.next_moves || []).findIndex(m => !m || !m.trim());
-    if (emptyIdx !== -1) {
-      d.next_moves[emptyIdx] = sug;
-    } else {
-      d.next_moves.push(sug);
-    }
+    moAppendMove(projectId, sug);
     saveMondayOpenDraft();
     renderMondayOpen();
-    setTimeout(() => {
-      const inputs = document.querySelectorAll(`[data-mo-move-input="${projectId}"]`);
-      const target = inputs[emptyIdx !== -1 ? emptyIdx : inputs.length - 1];
-      if (target) { target.focus(); target.setSelectionRange(target.value.length, target.value.length); }
-    }, 0);
-  }
-  function moAddNextMove(projectId) {
-    const d = state.mondayOpen.decisions[projectId];
-    moCaptureCurrentNextMove();
-    d.next_moves.push('');
-    saveMondayOpenDraft();
-    renderMondayOpen();
-    setTimeout(() => {
-      const inputs = document.querySelectorAll(`[data-mo-move-input="${projectId}"]`);
-      const last = inputs[inputs.length - 1];
-      if (last) last.focus();
-    }, 0);
   }
   function moRemoveNextMove(projectId, idx) {
     const d = state.mondayOpen.decisions[projectId];
+    if (!d) return;
     moCaptureCurrentNextMove();
-    if (d.next_moves.length <= 1) {
-      d.next_moves = [''];
-    } else {
-      d.next_moves.splice(idx, 1);
+    moEnsureMoveRows(d);
+    if (idx >= 0 && idx < d.move_rows.length) {
+      d.move_rows.splice(idx, 1);
     }
     saveMondayOpenDraft();
+    renderMondayOpen();
+  }
+  function moSetMoveDate(projectId, idx, isoDate) {
+    const d = state.mondayOpen.decisions[projectId];
+    if (!d || !Array.isArray(d.move_rows)) return;
+    const row = d.move_rows[idx];
+    if (!row) return;
+    row.do_date = isoDate || null;
+    d.openDatePicker = null;
+    saveMondayOpenDraft();
+    renderMondayOpen();
+  }
+  function moToggleMoveDatePicker(projectId, idx) {
+    const d = state.mondayOpen.decisions[projectId];
+    if (!d) return;
+    moCaptureCurrentNextMove();
+    d.openDatePicker = d.openDatePicker === idx ? null : idx;
     renderMondayOpen();
   }
   function moCaptureCurrentNextMove() {
@@ -5320,14 +5904,234 @@ Output strict JSON array, no surrounding prose, no code fences:
     const p = mo.projects.find(x => x.id === step.projectId);
     if (!p) return;
     const d = mo.decisions[p.id];
+    moEnsureMoveRows(d);
     const inputs = document.querySelectorAll(`[data-mo-move-input="${p.id}"]`);
-    if (inputs.length) {
-      d.next_moves = Array.from(inputs).map(el => el.value);
-    }
-    const dumpEl = document.getElementById(`mo-brain-dump-${p.id}`);
-    if (dumpEl) d.brainDumpText = dumpEl.value;
+    inputs.forEach(el => {
+      const idx = Number(el.dataset.moMoveIdx || -1);
+      if (idx >= 0 && idx < d.move_rows.length) {
+        d.move_rows[idx].title = el.value;
+      }
+    });
+    const composerEl = document.getElementById(`mo-composer-${p.id}`);
+    if (composerEl) d.composer = composerEl.value;
     const outcomeEl = document.getElementById(`mo-dod-edit-${p.id}`);
     if (outcomeEl) d.outcomeDraft = outcomeEl.value;
+    const nameEl = document.getElementById(`mo-name-edit-${p.id}`);
+    if (nameEl) d.nameDraft = nameEl.value;
+  }
+
+  // — Unified composer —
+  function moComposerAdd(projectId) {
+    const d = state.mondayOpen.decisions[projectId];
+    if (!d) return;
+    moCaptureCurrentNextMove();
+    const text = (d.composer || '').trim();
+    if (!text) return;
+    moAppendMove(projectId, text);
+    d.composer = '';
+    saveMondayOpenDraft();
+    renderMondayOpen();
+  }
+  async function moComposerParse(projectId) {
+    const d = state.mondayOpen.decisions[projectId];
+    const project = state.mondayOpen.projects.find(p => p.id === projectId);
+    if (!project || !d) return;
+    moCaptureCurrentNextMove();
+    const text = (d.composer || '').trim();
+    if (!text) return;
+    // Short text with no obvious sentence breaks: just add as a single move
+    if (text.length < 40 && !/[.\n]/.test(text)) {
+      moAppendMove(projectId, text);
+      d.composer = '';
+      saveMondayOpenDraft();
+      renderMondayOpen();
+      return;
+    }
+    d.composerLoading = true;
+    renderMondayOpen();
+    const system = `Extract individual concrete next moves from a paragraph. Each move is one short imperative line, parentheticals for metadata.
+
+Rules:
+- One move per array entry. No prefacing.
+- Strip filler ("I should...", "TODO:", "Need to..."). Just the action.
+- Don't invent moves not implied by the text.
+- 1–7 moves max.
+
+Output strict JSON array of strings, no surrounding prose:
+["move 1", "move 2", "move 3"]`;
+    const userPrompt = `Project: ${project.name}\n${project.outcome ? `Outcome: ${project.outcome}\n` : ''}\nParagraph:\n${text}`;
+    try {
+      const raw = await callClaude(userPrompt, { system, maxTokens: 600 });
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed) && parsed.length) {
+        const moves = parsed.map(s => stripIdLeaks(String(s || ''))).filter(Boolean);
+        moves.forEach(m => moAppendMove(projectId, m));
+        d.composer = '';
+        saveMondayOpenDraft();
+      } else {
+        // Fall back to single-move add if Claude returned nothing usable
+        moAppendMove(projectId, text);
+        d.composer = '';
+        saveMondayOpenDraft();
+      }
+    } catch (err) {
+      console.warn('Composer parse failed:', err);
+      // Best-effort fallback: add the raw text as one move
+      moAppendMove(projectId, text);
+      d.composer = '';
+      saveMondayOpenDraft();
+    } finally {
+      d.composerLoading = false;
+      renderMondayOpen();
+    }
+  }
+
+  // — Per-move Reminders push: commits the move's task, then opens the Shortcuts deeplink —
+  async function moSendMoveToReminders(projectId, idx) {
+    const d = state.mondayOpen.decisions[projectId];
+    if (!d || !Array.isArray(d.move_rows)) return;
+    const row = d.move_rows[idx];
+    if (!row || row.remindersSent) return;
+    moCaptureCurrentNextMove();
+    const title = (row.title || '').trim();
+    if (!title) {
+      alert('Add a title for this move before sending to Reminders.');
+      return;
+    }
+    let taskId = row.committedTaskId;
+    let taskRow = null;
+    try {
+      if (!taskId) {
+        const inserted = await sbFetch('/course_tasks', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            status: 'next',
+            project_id: projectId,
+            do_date: row.do_date || defaultMoveDate(d),
+          }),
+        });
+        if (inserted && inserted[0]) {
+          taskRow = inserted[0];
+          taskId = inserted[0].id;
+          row.committedTaskId = taskId;
+          d.committedTaskIds = d.committedTaskIds || [];
+          d.committedTaskIds.push(taskId);
+          if (state.tasksMode.tasks) state.tasksMode.tasks.push(inserted[0]);
+        }
+      } else {
+        // Refresh stored row so the deeplink has the latest title/date
+        await sbFetch(`/course_tasks?id=eq.${taskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ title, do_date: row.do_date || null }),
+        });
+        const found = state.tasksMode.tasks && state.tasksMode.tasks.find(t => t.id === taskId);
+        if (found) { found.title = title; found.do_date = row.do_date || null; taskRow = found; }
+      }
+      if (!taskRow) taskRow = { id: taskId, title, do_date: row.do_date || null, project_id: projectId };
+      const deeplink = buildRemindersDeeplink(taskRow);
+      window.location.href = deeplink;
+      const marker = `shortcut-${Date.now()}`;
+      try {
+        await sbFetch(`/course_tasks?id=eq.${taskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ reminders_uuid: marker, status: 'pushed' }),
+        });
+        const project = state.projects.find(p => p.id === projectId);
+        if (project) writebackTaskStatus(taskRow.notion_url || null, 'pushed');
+        if (state.tasksMode.tasks) {
+          const t = state.tasksMode.tasks.find(x => x.id === taskId);
+          if (t) { t.reminders_uuid = marker; t.status = 'pushed'; }
+        }
+      } catch (err) {
+        console.warn('Mark sent failed:', err);
+      }
+      row.remindersSent = true;
+      saveMondayOpenDraft();
+      renderMondayOpen();
+      showToast('Sent to Reminders.', { durationMs: 2200 });
+    } catch (err) {
+      console.warn('Send move to Reminders failed:', err);
+      alert('Failed to send: ' + err.message);
+    }
+  }
+
+  // — Inline edit project name in Monday Open —
+  function moStartEditName(projectId) {
+    const project = state.mondayOpen.projects.find(p => p.id === projectId);
+    if (!project) return;
+    const d = state.mondayOpen.decisions[projectId];
+    d.editingName = true;
+    d.nameDraft = project.name || '';
+    renderMondayOpen();
+    setTimeout(() => {
+      const el = document.getElementById(`mo-name-edit-${projectId}`);
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  }
+  async function moSaveName(projectId) {
+    const d = state.mondayOpen.decisions[projectId];
+    if (!d) return;
+    const el = document.getElementById(`mo-name-edit-${projectId}`);
+    const newName = el ? el.value.trim() : (d.nameDraft || '').trim();
+    const project = state.mondayOpen.projects.find(p => p.id === projectId);
+    const statefulProject = state.projects.find(p => p.id === projectId);
+    if (!newName || (project && project.name === newName)) {
+      d.editingName = false;
+      d.nameDraft = '';
+      renderMondayOpen();
+      return;
+    }
+    try {
+      const updated = await sbFetch(`/course_projects?id=eq.${projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName }),
+      });
+      if (updated && updated[0]) {
+        if (project) project.name = updated[0].name;
+        if (statefulProject) statefulProject.name = updated[0].name;
+      }
+      writebackProjectName(statefulProject ? statefulProject.notion_url : null, newName);
+      d.editingName = false;
+      d.nameDraft = '';
+      renderMondayOpen();
+    } catch (err) {
+      console.warn('Save name failed:', err);
+      alert('Failed to save name: ' + err.message);
+    }
+  }
+  function moCancelEditName(projectId) {
+    const d = state.mondayOpen.decisions[projectId];
+    d.editingName = false;
+    d.nameDraft = '';
+    renderMondayOpen();
+  }
+
+  // — Inline edit project due date in Monday Open —
+  async function moSaveDue(projectId, isoDate) {
+    const project = state.mondayOpen.projects.find(p => p.id === projectId);
+    const statefulProject = state.projects.find(p => p.id === projectId);
+    const newDate = isoDate || null;
+    if (project && (project.due_date || null) === newDate) return;
+    try {
+      const updated = await sbFetch(`/course_projects?id=eq.${projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ due_date: newDate }),
+      });
+      if (updated && updated[0]) {
+        if (project) project.due_date = updated[0].due_date;
+        if (statefulProject) statefulProject.due_date = updated[0].due_date;
+      } else {
+        if (project) project.due_date = newDate;
+        if (statefulProject) statefulProject.due_date = newDate;
+      }
+      writebackProjectDue(statefulProject ? statefulProject.notion_url : null, newDate);
+      renderMondayOpen();
+    } catch (err) {
+      console.warn('Save due failed:', err);
+      alert('Failed to save due date: ' + err.message);
+    }
   }
 
   // — Inline edit Definition of Done from Monday Open —
@@ -5374,65 +6178,6 @@ Output strict JSON array, no surrounding prose, no code fences:
     renderMondayOpen();
   }
 
-  // — Brain-dump: extract individual next moves from a paragraph via Claude —
-  function moOpenBrainDump(projectId) {
-    state.mondayOpen.decisions[projectId].brainDumpOpen = true;
-    renderMondayOpen();
-    setTimeout(() => {
-      const el = document.getElementById(`mo-brain-dump-${projectId}`);
-      if (el) el.focus();
-    }, 0);
-  }
-  function moCloseBrainDump(projectId) {
-    state.mondayOpen.decisions[projectId].brainDumpOpen = false;
-    state.mondayOpen.decisions[projectId].brainDumpText = '';
-    renderMondayOpen();
-  }
-  async function moExtractBrainDump(projectId) {
-    const d = state.mondayOpen.decisions[projectId];
-    const project = state.mondayOpen.projects.find(p => p.id === projectId);
-    if (!project) return;
-    const dumpEl = document.getElementById(`mo-brain-dump-${projectId}`);
-    const text = dumpEl ? dumpEl.value.trim() : (d.brainDumpText || '').trim();
-    if (!text) return;
-    d.brainDumpLoading = true;
-    d.brainDumpText = text;
-    renderMondayOpen();
-    const system = `Extract individual concrete next moves from a paragraph. Each move is one short imperative line, parentheticals for metadata.
-
-Rules:
-- One move per array entry. No prefacing.
-- Strip filler ("I should...", "TODO:", "Need to..."). Just the action.
-- Don't invent moves not implied by the text.
-- 1–7 moves max.
-
-Output strict JSON array of strings, no surrounding prose:
-["move 1", "move 2", "move 3"]`;
-    const userPrompt = `Project: ${project.name}\n${project.outcome ? `Outcome: ${project.outcome}\n` : ''}\nParagraph:\n${text}`;
-    try {
-      const raw = await callClaude(userPrompt, { system, maxTokens: 600 });
-      const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-      const parsed = JSON.parse(cleaned);
-      if (Array.isArray(parsed) && parsed.length) {
-        const moves = parsed.map(s => stripIdLeaks(String(s || ''))).filter(Boolean);
-        // If existing list is only an empty row, replace; else append
-        if (d.next_moves.length === 1 && !d.next_moves[0].trim()) {
-          d.next_moves = moves;
-        } else {
-          d.next_moves = d.next_moves.concat(moves);
-        }
-        d.brainDumpOpen = false;
-        d.brainDumpText = '';
-        saveMondayOpenDraft();
-      }
-    } catch (err) {
-      console.warn('Brain-dump extract failed:', err);
-      alert('Failed to extract: ' + err.message);
-    } finally {
-      d.brainDumpLoading = false;
-      renderMondayOpen();
-    }
-  }
   async function moNext() {
     const mo = state.mondayOpen;
     const step = mo.steps[mo.step];
@@ -5448,14 +6193,51 @@ Output strict JSON array of strings, no surrounding prose:
         mo.decisions[p.id].timestamp = new Date().toISOString();
         await commitProjectDecision(p.id);
         await persistMondayOpenReviewRow();
+        const committedPid = p.id;
+        const decided = mo.decisions[p.id].decision;
+        const verb = decided === 'drop' ? 'Archived' : decided === 'push' ? 'Moved to Ideas' : 'Committed';
+        showToast(`${verb}: ${p.name}`, {
+          durationMs: 6000,
+          undo: () => moUndoProjectCommit(committedPid),
+        });
       }
     } else if (step.type === 'tasks') {
       await commitTaskAssignments();
+      await persistMondayOpenReviewRow();
+    } else if (step.type === 'idea_review') {
+      await commitIdeaDecisions();
       await persistMondayOpenReviewRow();
     }
     mo.step++;
     saveMondayOpenDraft();
     renderMondayOpen();
+  }
+
+  // Apply idea-stage triage. Idempotent: re-running reverts a prior status
+  // change if the user went Back and changed their pick.
+  async function commitIdeaDecisions() {
+    const mo = state.mondayOpen;
+    for (const p of (mo.ideaProjects || [])) {
+      const choice = mo.ideaDecisions[p.id] || 'keep';
+      const targetStatus = choice === 'activate' ? 'active'
+        : choice === 'drop' ? 'archived'
+        : 'idea';
+      const alreadyApplied = mo.ideaCommitted[p.id];
+      if (alreadyApplied === choice) continue;
+      try {
+        await sbFetch(`/course_projects?id=eq.${p.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: targetStatus }),
+        });
+        const sp = state.projects.find(x => x.id === p.id);
+        if (sp) { sp.status = targetStatus; writebackProjectStatus(sp.notion_url, targetStatus); }
+        p.status = targetStatus;
+        mo.ideaCommitted[p.id] = choice;
+      } catch (err) {
+        console.warn('Idea decision commit failed:', p.id, err);
+      }
+    }
+    invalidateAreaPillarMap();
   }
   function moBack() {
     if (state.mondayOpen.step === 0) return;
@@ -5463,6 +6245,58 @@ Output strict JSON array of strings, no surrounding prose:
     state.mondayOpen.step--;
     saveMondayOpenDraft();
     renderMondayOpen();
+  }
+
+  // Undo a just-committed project decision: delete its created tasks (keep any
+  // already pushed to Reminders), restore status to active, clear the decision
+  // timestamp, and step the flow back to that project.
+  async function moUndoProjectCommit(projectId) {
+    const mo = state.mondayOpen;
+    const d = mo.decisions[projectId];
+    if (!d) return;
+    const remindersSentIds = new Set(
+      (d.move_rows || [])
+        .filter(m => m && m.remindersSent && m.committedTaskId)
+        .map(m => m.committedTaskId)
+    );
+    for (const tid of (d.committedTaskIds || [])) {
+      if (remindersSentIds.has(tid)) continue;
+      try {
+        await sbFetch(`/course_tasks?id=eq.${tid}`, { method: 'DELETE' });
+        if (state.tasksMode.tasks) {
+          state.tasksMode.tasks = state.tasksMode.tasks.filter(t => t.id !== tid);
+        }
+      } catch (err) {
+        console.warn('Undo: delete task failed', tid, err);
+      }
+    }
+    d.committedTaskIds = Array.from(remindersSentIds);
+    (d.move_rows || []).forEach(m => {
+      if (m && m.committedTaskId && !remindersSentIds.has(m.committedTaskId)) m.committedTaskId = null;
+    });
+    if (d.committedStatusChange) {
+      try {
+        await sbFetch(`/course_projects?id=eq.${projectId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'active' }),
+        });
+        const p = state.projects.find(x => x.id === projectId);
+        if (p) { p.status = 'active'; writebackProjectStatus(p.notion_url, 'active'); }
+        const mp = mo.projects.find(x => x.id === projectId);
+        if (mp) mp.status = 'active';
+      } catch (err) {
+        console.warn('Undo: revert status failed', err);
+      }
+      d.committedStatusChange = null;
+    }
+    d.timestamp = null;
+    const idx = mo.steps.findIndex(s => s.type === 'project' && s.projectId === projectId);
+    if (idx !== -1) mo.step = idx;
+    invalidateAreaPillarMap();
+    await persistMondayOpenReviewRow();
+    saveMondayOpenDraft();
+    renderMondayOpen();
+    showToast('Reverted — pick a different decision.', { durationMs: 2500 });
   }
   function moMapTask(taskId) {
     const a = state.mondayOpen.taskAssignments[taskId];
@@ -5478,9 +6312,22 @@ Output strict JSON array of strings, no surrounding prose:
     const d = state.mondayOpen.decisions[projectId];
     if (!d) return;
 
-    // Undo previous commit's effects (so changes between visits are idempotent)
+    // Undo previous commit's effects (so changes between visits are idempotent).
+    // Tasks that were pushed to Apple Reminders (remindersSent) live in Reminders
+    // now — we must NOT delete them on revisit, since deleting would orphan the
+    // user's Reminders entry.
     if (d.committedTaskIds && d.committedTaskIds.length) {
+      const remindersSentIds = new Set(
+        (d.move_rows || [])
+          .filter(m => m && m.remindersSent && m.committedTaskId)
+          .map(m => m.committedTaskId)
+      );
+      const surviving = [];
       for (const tid of d.committedTaskIds) {
+        if (remindersSentIds.has(tid)) {
+          surviving.push(tid);
+          continue;
+        }
         try {
           await sbFetch(`/course_tasks?id=eq.${tid}`, { method: 'DELETE' });
           if (state.tasksMode.tasks) {
@@ -5490,10 +6337,25 @@ Output strict JSON array of strings, no surrounding prose:
           console.warn('Monday Open: delete previous task failed', tid, err);
         }
       }
-      d.committedTaskIds = [];
+      d.committedTaskIds = surviving;
+      // Clear stale committedTaskId on rows whose tasks we just deleted, so
+      // commit can re-create them fresh from the current move state.
+      (d.move_rows || []).forEach(m => {
+        if (m && m.committedTaskId && !remindersSentIds.has(m.committedTaskId)) {
+          m.committedTaskId = null;
+        }
+      });
     }
-    if (d.committedStatusChange === 'archived' && d.decision !== 'drop') {
-      // We previously archived this project but the new decision isn't drop — revert to active
+    // If we previously flipped status (archived for drop, idea for push) but the
+    // new decision doesn't match, revert to active before applying the new one.
+    const desiredStatusForDecision = {
+      yes: 'active',
+      push: 'idea',
+      drop: 'archived',
+    };
+    const prevStatus = d.committedStatusChange;
+    const wantedStatus = desiredStatusForDecision[d.decision];
+    if (prevStatus && prevStatus !== wantedStatus) {
       try {
         await sbFetch(`/course_projects?id=eq.${projectId}`, {
           method: 'PATCH',
@@ -5502,7 +6364,7 @@ Output strict JSON array of strings, no surrounding prose:
         const p = state.projects.find(x => x.id === projectId);
         if (p) { p.status = 'active'; writebackProjectStatus(p.notion_url, 'active'); }
       } catch (err) {
-        console.warn('Monday Open: revert archive failed', err);
+        console.warn('Monday Open: revert previous status failed', err);
       }
       d.committedStatusChange = null;
     }
@@ -5511,14 +6373,17 @@ Output strict JSON array of strings, no surrounding prose:
     if (d.decision === 'yes') {
       const dayChips = getMondayOpenDayChips();
       const dayKeyToDate = Object.fromEntries(dayChips.map(c => [c.key, c.date]));
-      const doDate = (d.scheduled_day && dayKeyToDate[d.scheduled_day]) || null;
-      const moves = (d.next_moves || []).map(s => (s || '').trim()).filter(Boolean);
-      for (const moveTitle of moves) {
+      // Each move now carries its own date; fall back to project-level scheduled_day if unset
+      const defaultDate = (d.scheduled_day && dayKeyToDate[d.scheduled_day]) || dayChips[0].date;
+      const moveRows = (d.move_rows || []).filter(m => m.title && m.title.trim());
+      for (const mv of moveRows) {
+        if (mv.committedTaskId) continue; // already pushed to Reminders inline
+        const doDate = mv.do_date || defaultDate;
         try {
           const inserted = await sbFetch('/course_tasks', {
             method: 'POST',
             body: JSON.stringify({
-              title: moveTitle,
+              title: mv.title.trim(),
               status: 'next',
               project_id: projectId,
               do_date: doDate,
@@ -5526,6 +6391,7 @@ Output strict JSON array of strings, no surrounding prose:
           });
           if (inserted && inserted[0]) {
             d.committedTaskIds.push(inserted[0].id);
+            mv.committedTaskId = inserted[0].id;
             if (state.tasksMode.tasks) state.tasksMode.tasks.push(inserted[0]);
           }
         } catch (err) {
@@ -5541,13 +6407,30 @@ Output strict JSON array of strings, no surrounding prose:
           });
           const p = state.projects.find(x => x.id === projectId);
           if (p) { p.status = 'archived'; writebackProjectStatus(p.notion_url, 'archived'); }
+          const moProj = state.mondayOpen.projects.find(x => x.id === projectId);
+          if (moProj) moProj.status = 'archived';
           d.committedStatusChange = 'archived';
         } catch (err) {
           console.warn('Monday Open: archive failed', err);
         }
       }
+    } else if (d.decision === 'push') {
+      if (d.committedStatusChange !== 'idea') {
+        try {
+          await sbFetch(`/course_projects?id=eq.${projectId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'idea' }),
+          });
+          const p = state.projects.find(x => x.id === projectId);
+          if (p) { p.status = 'idea'; writebackProjectStatus(p.notion_url, 'idea'); }
+          const moProj = state.mondayOpen.projects.find(x => x.id === projectId);
+          if (moProj) moProj.status = 'idea';
+          d.committedStatusChange = 'idea';
+        } catch (err) {
+          console.warn('Monday Open: push to idea failed', err);
+        }
+      }
     }
-    // For 'push', no concrete state changes — captured in decisions_json only.
   }
 
   async function moSetProjectPillar(projectId, pillar) {
@@ -5567,6 +6450,7 @@ Output strict JSON array of strings, no surrounding prose:
       } else {
         project.pillar = pillar;
       }
+      invalidateAreaPillarMap();
       renderMondayOpen();
     } catch (err) {
       console.warn('Set pillar failed:', err);
@@ -5672,20 +6556,29 @@ Output strict JSON array of strings, no surrounding prose:
     const decisionsForPersist = mo.projects.map(p => {
       const d = mo.decisions[p.id];
       if (!d) return null;
+      const moves = (d.move_rows || [])
+        .filter(m => m && m.title && m.title.trim())
+        .map(m => ({ title: m.title.trim(), do_date: m.do_date || null }));
       return {
         project_id: d.project_id,
         decision: d.decision,
-        next_moves: (d.next_moves || []).map(s => (s || '').trim()).filter(Boolean),
-        scheduled_day: d.scheduled_day,
+        moves,
         timestamp: d.timestamp,
       };
     }).filter(Boolean);
+    const ideaDecisionsForPersist = (mo.ideaProjects || []).map(p => ({
+      project_id: p.id,
+      decision: mo.ideaDecisions[p.id] || 'keep',
+      timestamp: mo.ideaCommitted[p.id] ? new Date().toISOString() : null,
+    }));
+    const decisionsJson = { decisions: decisionsForPersist };
+    if (ideaDecisionsForPersist.length) decisionsJson.idea_decisions = ideaDecisionsForPersist;
     try {
       const existing = await sbFetch(`/course_reviews?review_type=eq.monday_open&week_of=eq.${mo.weekOf}&select=id`);
       if (existing && existing.length) {
         await sbFetch(`/course_reviews?id=eq.${existing[0].id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ decisions_json: { decisions: decisionsForPersist } }),
+          body: JSON.stringify({ decisions_json: decisionsJson }),
         });
       } else {
         await sbFetch('/course_reviews', {
@@ -5693,7 +6586,7 @@ Output strict JSON array of strings, no surrounding prose:
           body: JSON.stringify({
             review_type: 'monday_open',
             week_of: mo.weekOf,
-            decisions_json: { decisions: decisionsForPersist },
+            decisions_json: decisionsJson,
           }),
         });
       }
@@ -5814,6 +6707,49 @@ Output strict JSON array of strings, no surrounding prose:
       .filter(x => x.daysIdle >= 5)
       .sort((a, b) => b.daysIdle - a.daysIdle)
       .slice(0, 5);
+
+    // "Didn't get done" — Monday's decision=yes projects whose committed moves
+    // are still open. Distinct from Slipped (which is idle-days based): this is
+    // "you said you would this week, and it didn't happen."
+    fc.unfinished = [];
+    try {
+      const moRow = await sbFetch(`/course_reviews?review_type=eq.monday_open&week_of=eq.${fc.weekOf}&select=decisions_json`);
+      const moDecisions = (moRow && moRow[0] && moRow[0].decisions_json && moRow[0].decisions_json.decisions) || [];
+      const yesDecisions = moDecisions.filter(d => d.decision === 'yes' && (d.moves || []).length);
+      if (yesDecisions.length) {
+        const yesIds = yesDecisions.map(d => d.project_id);
+        // Open (not done/dropped) tasks for those projects
+        let openTasks = [];
+        try {
+          const idList = yesIds.join(',');
+          openTasks = await sbFetch(`/course_tasks?project_id=in.(${idList})&status=not.in.(done,dropped)&select=id,project_id,title`) || [];
+        } catch (e) { console.warn('Unfinished open-tasks fetch failed:', e); }
+        const openByProject = {};
+        openTasks.forEach(t => {
+          (openByProject[t.project_id] = openByProject[t.project_id] || []).push((t.title || '').trim().toLowerCase());
+        });
+        yesDecisions.forEach(d => {
+          const proj = projects.find(p => p.id === d.project_id);
+          if (!proj) return;
+          const openTitles = openByProject[d.project_id] || [];
+          const unfinishedMoves = (d.moves || [])
+            .map(m => (m.title || '').trim())
+            .filter(Boolean)
+            .filter(title => openTitles.includes(title.toLowerCase()));
+          const noProgress = !tasksByProject[d.project_id];
+          if (unfinishedMoves.length || noProgress) {
+            fc.unfinished.push({
+              project: proj,
+              moves: unfinishedMoves,
+              noProgress,
+            });
+          }
+        });
+        fc.unfinished = fc.unfinished.slice(0, 6);
+      }
+    } catch (e) {
+      console.warn('Compute unfinished failed:', e);
+    }
   }
 
   async function generateFridayCloseNarrative() {
@@ -5827,6 +6763,12 @@ Output strict JSON array of strings, no surrounding prose:
     const slippedSummary = fc.slipped.length
       ? fc.slipped.map(s => `${s.project.name} (${s.daysIdle}d idle)`).join(', ')
       : 'no active project stalled';
+    const unfinishedSummary = (fc.unfinished && fc.unfinished.length)
+      ? fc.unfinished.map(u => {
+          const moves = (u.moves || []).slice(0, 3).join('; ');
+          return `${u.project.name}${moves ? ` (still open: ${moves})` : ' (no progress)'}`;
+        }).join(', ')
+      : 'all Monday commitments met or no Monday commitments';
     let mondayContext = '';
     try {
       const moRow = await sbFetch(`/course_reviews?review_type=eq.monday_open&week_of=eq.${fc.weekOf}&select=decisions_json`);
@@ -5849,9 +6791,10 @@ Output strict JSON array of strings, no surrounding prose:
 Done: ${fc.stats.done} tasks. Pushed: ${fc.stats.pushed}. Dropped: ${fc.stats.dropped}.
 Projects that moved: ${movedSummary}.
 Projects that slipped: ${slippedSummary}.
+Committed Monday but not done: ${unfinishedSummary}.
 ${mondayContext}
 
-Write "The Read" — a brief observational review of the week.`;
+Write "The Read" — a brief observational review of the week. If commitments were made Monday and not done, name them plainly — that's the most useful signal.`;
     try {
       const narrative = await callClaude(prompt, { system, maxTokens: 250 });
       fc.narrative = (narrative || '').trim();
@@ -6005,6 +6948,21 @@ Write "The Read" — a brief observational review of the week.`;
             </div>`).join('')
         : '<div class="movement-empty">Nothing stalled past five days.</div>'}`;
 
+    const unfinished = fc.unfinished || [];
+    const unfinishedBlock = `
+      <div class="section-label" style="margin: var(--sp-18) var(--sp-4) var(--sp-10);">Didn't get done</div>
+      ${unfinished.length
+        ? unfinished.map(u => `<div class="movement-item" data-fc-jump="${u.project.id}">
+              ${pillarDotHtml(effectivePillar(u.project)) || '<div class="pillar-dot"></div>'}
+              <div class="item-body">
+                <div class="item-title">${escapeHtml(u.project.name)}</div>
+                <div class="item-meta risk">${u.moves && u.moves.length
+                  ? escapeHtml(u.moves.slice(0, 3).join(' · '))
+                  : 'Committed Monday — no progress'}</div>
+              </div>
+            </div>`).join('')
+        : '<div class="movement-empty">Everything committed Monday got moved.</div>'}`;
+
     const questionsBlock = `
       <div class="question-block" style="margin-top: var(--sp-26);">
         <div class="question-label">Question 1</div>
@@ -6036,7 +6994,7 @@ Write "The Read" — a brief observational review of the week.`;
         ${fc.saving ? 'Closing…' : fc.saved ? 'Closed · back to dashboard' : 'Close the week'}
       </button>`;
 
-    body.innerHTML = narrativeBlock + statsBlock + movedBlock + slippedBlock + questionsBlock + pushBlock + closeBtn;
+    body.innerHTML = narrativeBlock + statsBlock + movedBlock + slippedBlock + unfinishedBlock + questionsBlock + pushBlock + closeBtn;
   }
 
   // — Capture Inbox —
@@ -6399,6 +7357,34 @@ Output strict JSON array (no surrounding prose, no code fences):
       const budgetHtml = budget
         ? `<span class="day-header-budget ${budget.mins > 300 ? 'over' : ''}">· ${budget.label}</span>`
         : '';
+
+      // Day overload advisory — only for the actionable horizon (Today/Tomorrow)
+      let overloadHtml = '';
+      if (dateKey && dayClass !== 'no-date') {
+        const OVER_MINS = 360, OVER_TASKS = 8, OVER_PROJECTS = 4;
+        const mins = budget ? budget.mins : 0;
+        const taskCount = sectionTasks.length;
+        const projectCount = Object.keys(byProject).length;
+        const tripped = [];
+        if (mins > OVER_MINS) tripped.push('effort');
+        if (taskCount > OVER_TASKS) tripped.push('tasks');
+        if (projectCount > OVER_PROJECTS) tripped.push('projects');
+        if (tripped.length) {
+          const factsParts = [`${taskCount} task${taskCount === 1 ? '' : 's'}`];
+          if (budget) factsParts.push(budget.label.replace('~', '~'));
+          if (projectCount > 1) factsParts.push(`${projectCount} projects`);
+          const facts = factsParts.join(', ');
+          let rec;
+          if (tripped.includes('projects')) {
+            rec = 'Spread thin across too many projects — pick one to focus and push or triage the rest.';
+          } else if (tripped.includes('effort')) {
+            rec = 'More hours booked than a day holds — push the lowest-priority items to a lighter day.';
+          } else {
+            rec = 'A lot stacked here — push what can wait or triage what isn’t real.';
+          }
+          overloadHtml = `<div class="day-overload">${escapeHtml(label)} is heavy: ${escapeHtml(facts)}. ${escapeHtml(rec)}</div>`;
+        }
+      }
       const dayLabel = dateKey ? fmtDayLabel(label, dateKey) : label;
       const addBtn = dateKey
         ? `<button class="day-header-add ${addingOpen ? 'active' : ''}" data-add-for="${dateKey}" aria-label="Add task">+</button>`
@@ -6427,6 +7413,7 @@ Output strict JSON array (no surrounding prose, no code fences):
             <div class="day-header-main"><span>${escapeHtml(dayLabel)}</span><span class="day-header-count">· ${sectionTasks.length}</span>${budgetHtml}</div>
             ${addBtn}
           </div>
+          ${overloadHtml}
           <div class="day-add-input-wrap ${addingOpen ? 'open' : ''}">
             <input type="text" class="day-add-input" placeholder="Add a task…" data-add-input-for="${dateKey || ''}" />
           </div>
@@ -7123,6 +8110,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     container.querySelectorAll('select[data-area-pillar]').forEach(sel => {
       sel.addEventListener('change', (e) => {
         s.areas[e.target.dataset.areaPillar].pillarId = e.target.value || null;
+        invalidateAreaPillarMap();
         saveSetupState();
       });
     });
@@ -7832,7 +8820,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     state.detail = {
       loading: true, projectId, project: null, tasks: [], goal: null,
       nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status',
-      outcomeEditing: false, progressSliderOpen: false, statusPickerOpen: false,
+      outcomeEditing: false, notesEditing: false, progressSliderOpen: false, statusPickerOpen: false,
     };
     renderProjectDetail();
     try {
@@ -7966,6 +8954,26 @@ Output strict JSON array (no surrounding prose, no code fences):
             <button class="outcome-edit-btn" id="pd-edit-outcome">${p.outcome ? 'Edit' : 'Add'}</button>
           </div>
           <div class="outcome-text ${p.outcome ? '' : 'muted'}">${p.outcome ? escapeHtml(p.outcome) : 'Not set yet. Tap Add to write the finish line.'}</div>
+        </div>
+      `}
+      ${d.notesEditing ? `
+        <div class="outcome-block">
+          <div class="outcome-label-row">
+            <div class="outcome-label">Notes</div>
+            <div class="outcome-edit-actions">
+              <button id="pd-cancel-notes">Cancel</button>
+              <button id="pd-save-notes" class="primary">Save</button>
+            </div>
+          </div>
+          <textarea class="outcome-edit-input" id="pd-notes-input" placeholder="Context, links, open questions, scratch thinking…">${escapeHtml(p.notes || '')}</textarea>
+        </div>
+      ` : `
+        <div class="outcome-block">
+          <div class="outcome-label-row">
+            <div class="outcome-label">Notes</div>
+            <button class="outcome-edit-btn" id="pd-edit-notes">${p.notes ? 'Edit' : 'Add'}</button>
+          </div>
+          <div class="outcome-text ${p.notes ? '' : 'muted'}" style="white-space: pre-wrap;">${p.notes ? escapeHtml(p.notes) : 'Add a note…'}</div>
         </div>
       `}
       <div class="meta-row">
@@ -8425,6 +9433,34 @@ Output strict JSON array (no surrounding prose, no code fences):
     }
   }
 
+  async function saveProjectNotes() {
+    const d = state.detail;
+    const input = document.getElementById('pd-notes-input');
+    if (!input || !d.project) return;
+    const saveBtn = document.getElementById('pd-save-notes');
+    const cancelBtn = document.getElementById('pd-cancel-notes');
+    const newNotes = input.value.trim();
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+    if (cancelBtn) cancelBtn.disabled = true;
+    try {
+      const updated = await sbFetch(`/course_projects?id=eq.${d.projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: newNotes || null }),
+      });
+      if (updated && updated[0]) d.project = updated[0];
+      else d.project.notes = newNotes || null;
+      // Mirror into the dashboard cache so it doesn't go stale
+      const sp = state.projects.find(x => x.id === d.projectId);
+      if (sp) sp.notes = d.project.notes;
+      d.notesEditing = false;
+      renderProjectDetail();
+    } catch (err) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+      if (cancelBtn) cancelBtn.disabled = false;
+      alert('Save failed: ' + err.message);
+    }
+  }
+
   // — Task Sheet (bottom-sheet editor) —
   const TASK_STATUS_OPTIONS = ['triage', 'next', 'in_progress', 'waiting', 'pushed', 'done', 'dropped'];
 
@@ -8436,6 +9472,19 @@ Output strict JSON array (no surrounding prose, no code fences):
     if (state.tasksMode && Array.isArray(state.tasksMode.tasks)) {
       const t = state.tasksMode.tasks.find(x => x.id === id);
       if (t) return t;
+    }
+    // Monday Open caches: per-project open tasks + orphan task list
+    if (state.mondayOpen) {
+      if (state.mondayOpen.tasksByProject) {
+        for (const pid in state.mondayOpen.tasksByProject) {
+          const t = (state.mondayOpen.tasksByProject[pid] || []).find(x => x.id === id);
+          if (t) return t;
+        }
+      }
+      if (Array.isArray(state.mondayOpen.unscopedTasks)) {
+        const t = state.mondayOpen.unscopedTasks.find(x => x.id === id);
+        if (t) return t;
+      }
     }
     return null;
   }
@@ -8487,13 +9536,55 @@ Output strict JSON array (no surrounding prose, no code fences):
   }
 
   function openTaskSheet(taskId) {
-    state.taskSheet = { open: true, taskId, statusPickerOpen: false };
+    state.taskSheet = { open: true, taskId, statusPickerOpen: false, notesEditing: false };
     renderTaskSheet();
   }
   function closeTaskSheet() {
-    state.taskSheet = { open: false, taskId: null, statusPickerOpen: false };
+    state.taskSheet = { open: false, taskId: null, statusPickerOpen: false, notesEditing: false };
     document.getElementById('task-sheet').classList.remove('open');
     document.getElementById('task-sheet-backdrop').classList.remove('open');
+  }
+
+  async function saveTaskNotesFromSheet() {
+    const taskId = state.taskSheet.taskId;
+    if (!taskId) return;
+    const input = document.getElementById('task-sheet-notes-input');
+    if (!input) return;
+    const newNotes = input.value.trim() || null;
+    const refs = [];
+    if (state.detail?.tasks) {
+      const t = state.detail.tasks.find(x => x.id === taskId);
+      if (t) refs.push(t);
+    }
+    if (state.tasksMode?.tasks) {
+      const t = state.tasksMode.tasks.find(x => x.id === taskId);
+      if (t) refs.push(t);
+    }
+    if (state.mondayOpen) {
+      if (state.mondayOpen.tasksByProject) {
+        for (const pid in state.mondayOpen.tasksByProject) {
+          const t = (state.mondayOpen.tasksByProject[pid] || []).find(x => x.id === taskId);
+          if (t) refs.push(t);
+        }
+      }
+      if (Array.isArray(state.mondayOpen.unscopedTasks)) {
+        const t = state.mondayOpen.unscopedTasks.find(x => x.id === taskId);
+        if (t) refs.push(t);
+      }
+    }
+    try {
+      const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: newNotes }),
+      });
+      if (updated && updated[0]) refs.forEach(r => Object.assign(r, updated[0]));
+      else refs.forEach(r => { r.notes = newNotes; });
+      state.taskSheet.notesEditing = false;
+      renderTaskSheet();
+    } catch (err) {
+      console.warn('Save task notes failed:', err);
+      alert('Failed to save notes: ' + err.message);
+    }
   }
 
   function getWorkAreaOptions() {
@@ -8576,12 +9667,24 @@ Output strict JSON array (no surrounding prose, no code fences):
       </div>
       <div class="task-sheet-section">
         <div class="meta-label">Do date</div>
-        <input type="date" class="task-sheet-date" id="task-sheet-do-date" value="${task.do_date || ''}" />
+        <div class="task-sheet-date-row">
+          <input type="date" class="task-sheet-date" id="task-sheet-do-date" value="${task.do_date || ''}" />
+          ${task.do_date ? `<button class="task-sheet-clear-btn" id="task-sheet-clear-do-date">Clear</button>` : ''}
+        </div>
         ${(task.reschedule_count || 0) > 0 ? `
           <div class="task-sheet-hint" style="${isTaskDrifting(task) ? 'color: var(--risk); font-weight: 600;' : ''}">
             ${isTaskDrifting(task) ? '↻ ' : ''}Rescheduled ${task.reschedule_count} time${task.reschedule_count === 1 ? '' : 's'}.
           </div>
         ` : ''}
+      </div>
+      <div class="task-sheet-section">
+        <div class="meta-label">Effort</div>
+        <div class="task-sheet-effort-row">
+          ${EFFORT_OPTIONS.map(opt => `
+            <button class="task-sheet-effort-chip ${task.effort === opt ? 'selected' : ''}" data-set-effort="${opt}">${opt}</button>
+          `).join('')}
+          <button class="task-sheet-effort-chip clear ${!task.effort ? 'selected' : ''}" data-set-effort="">Clear</button>
+        </div>
       </div>
       ${metaParts ? `
         <div class="task-sheet-section">
@@ -8599,9 +9702,13 @@ Output strict JSON array (no surrounding prose, no code fences):
       </div>
       <div class="task-sheet-section">
         <div class="meta-label">Notes</div>
-        ${task.notes
-          ? `<div class="task-sheet-notes">${escapeHtml(task.notes)}</div>`
-          : `<div class="task-sheet-notes muted">No notes.</div>`}
+        ${state.taskSheet.notesEditing
+          ? `<textarea class="task-sheet-input" id="task-sheet-notes-input" rows="3" placeholder="Context, links, open questions…">${escapeHtml(task.notes || '')}</textarea>
+             <div style="display: flex; gap: var(--sp-6); margin-top: var(--sp-8);">
+               <button class="nav-btn primary" id="task-sheet-save-notes">Save</button>
+               <button class="nav-btn" id="task-sheet-cancel-notes">Cancel</button>
+             </div>`
+          : `<div class="task-sheet-notes ${task.notes ? '' : 'muted'}" id="task-sheet-edit-notes" style="cursor: pointer; white-space: pre-wrap;">${task.notes ? escapeHtml(task.notes) : 'Add a note…'} <span class="task-sheet-edit-icon">✎</span></div>`}
       </div>
     `;
     document.getElementById('task-sheet').classList.add('open');
@@ -8704,6 +9811,18 @@ Output strict JSON array (no surrounding prose, no code fences):
       const t = state.tasksMode.tasks.find(x => x.id === taskId);
       if (t) refs.push(t);
     }
+    if (state.mondayOpen) {
+      if (state.mondayOpen.tasksByProject) {
+        for (const pid in state.mondayOpen.tasksByProject) {
+          const t = (state.mondayOpen.tasksByProject[pid] || []).find(x => x.id === taskId);
+          if (t) refs.push(t);
+        }
+      }
+      if (Array.isArray(state.mondayOpen.unscopedTasks)) {
+        const t = state.mondayOpen.unscopedTasks.find(x => x.id === taskId);
+        if (t) refs.push(t);
+      }
+    }
     if (!refs.length) return;
     const newDate = isoDate || null;
     if ((refs[0].do_date || null) === newDate) return;
@@ -8713,13 +9832,59 @@ Output strict JSON array (no surrounding prose, no code fences):
         body: JSON.stringify({ do_date: newDate }),
       });
       if (updated && updated[0]) refs.forEach(r => Object.assign(r, updated[0]));
+      else refs.forEach(r => { r.do_date = newDate; });
       writebackTaskDoDate(refs[0].notion_url, newDate);
+      renderTaskSheet();
       // Refresh underlying view since grouping by date may have changed
       if (state.view === 'project-detail') renderPdTasks();
       if (state.view === 'dashboard' && state.mode === 'tasks') { renderStats(); renderTasksMode(); }
     } catch (err) {
       console.warn('Save task do_date failed:', err);
       alert('Failed to save date: ' + err.message);
+    }
+  }
+
+  async function saveTaskEffortFromSheet(newEffort) {
+    const taskId = state.taskSheet.taskId;
+    if (!taskId) return;
+    const refs = [];
+    if (state.detail?.tasks) {
+      const t = state.detail.tasks.find(x => x.id === taskId);
+      if (t) refs.push(t);
+    }
+    if (state.tasksMode?.tasks) {
+      const t = state.tasksMode.tasks.find(x => x.id === taskId);
+      if (t) refs.push(t);
+    }
+    // Also mirror into Monday Open caches if present
+    if (state.mondayOpen) {
+      if (state.mondayOpen.tasksByProject) {
+        for (const pid in state.mondayOpen.tasksByProject) {
+          const t = (state.mondayOpen.tasksByProject[pid] || []).find(x => x.id === taskId);
+          if (t) refs.push(t);
+        }
+      }
+      if (Array.isArray(state.mondayOpen.unscopedTasks)) {
+        const t = state.mondayOpen.unscopedTasks.find(x => x.id === taskId);
+        if (t) refs.push(t);
+      }
+    }
+    const value = newEffort || null;
+    const current = refs[0] ? (refs[0].effort || null) : null;
+    if (current === value) return;
+    try {
+      const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ effort: value }),
+      });
+      if (updated && updated[0]) refs.forEach(r => Object.assign(r, updated[0]));
+      else refs.forEach(r => { r.effort = value; });
+      renderTaskSheet();
+      if (state.view === 'project-detail') renderPdTasks();
+      if (state.view === 'dashboard' && state.mode === 'tasks') { renderStats(); renderTasksMode(); }
+    } catch (err) {
+      console.warn('Save task effort failed:', err);
+      alert('Failed to save effort: ' + err.message);
     }
   }
 
@@ -9708,9 +10873,52 @@ Content-Type: application/json
       if (currentProjectId) moSetDecision(currentProjectId, decisionBtn.dataset.moDecision);
       return;
     }
-    const dayBtn = e.target.closest('[data-mo-day]');
-    if (dayBtn) {
-      if (currentProjectId) moSetDay(currentProjectId, dayBtn.dataset.moDay);
+    const ideaBtn = e.target.closest('[data-mo-idea]');
+    if (ideaBtn) {
+      state.mondayOpen.ideaDecisions[ideaBtn.dataset.moIdea] = ideaBtn.dataset.moIdeaChoice;
+      saveMondayOpenDraft();
+      renderMondayOpen();
+      return;
+    }
+    // Add-project affordance
+    if (e.target.closest('#mo-add-project-open')) { moOpenAddProject(); return; }
+    if (e.target.closest('#mo-ap-cancel')) { moCancelAddProject(); return; }
+    if (e.target.closest('#mo-ap-save')) { moSaveAddProject(); return; }
+    const apPillar = e.target.closest('[data-mo-ap-pillar]');
+    if (apPillar) {
+      moApCapture();
+      const draft = state.mondayOpen.addProjectDraft || (state.mondayOpen.addProjectDraft = {});
+      const v = apPillar.dataset.moApPillar;
+      draft.pillar = draft.pillar === v ? '' : v;
+      renderMoAddProject();
+      return;
+    }
+    // Per-move date picker — check the pill pick BEFORE the toggle. The popover
+    // is rendered *inside* the toggle element, so a pill click also matches the
+    // toggle ancestor; pick must win or the toggle would just close the popover.
+    const datePick = e.target.closest('[data-mo-move-date-pick]');
+    if (datePick) {
+      moSetMoveDate(datePick.dataset.moMoveDatePick, Number(datePick.dataset.moMoveIdx), datePick.dataset.moMoveDate);
+      e.stopPropagation();
+      return;
+    }
+    // Clicks inside the open popover that aren't a pill (e.g. the "Other…"
+    // label/input) must not bubble to the toggle and close it.
+    if (e.target.closest('[data-mo-date-popover]')) {
+      return;
+    }
+    const dateToggle = e.target.closest('[data-mo-move-date-toggle]');
+    if (dateToggle) {
+      const pid = dateToggle.dataset.moMoveDateToggle;
+      const idx = Number(dateToggle.dataset.moMoveIdx);
+      moToggleMoveDatePicker(pid, idx);
+      e.stopPropagation();
+      return;
+    }
+    // Per-move reminder button
+    const reminderBtn = e.target.closest('[data-mo-move-reminder]');
+    if (reminderBtn) {
+      moSendMoveToReminders(reminderBtn.dataset.moMoveReminder, Number(reminderBtn.dataset.moMoveIdx));
       return;
     }
     const useSug = e.target.closest('[data-mo-use-suggestion]');
@@ -9730,7 +10938,14 @@ Content-Type: application/json
     }
     const projTaskDone = e.target.closest('[data-mo-project-task-done]');
     if (projTaskDone) {
+      // Don't bubble into the row tap (which opens the Task Sheet)
+      e.stopPropagation();
       moCompleteProjectTask(projTaskDone.dataset.moProjectTaskDone);
+      return;
+    }
+    const existingTask = e.target.closest('[data-mo-existing-task]');
+    if (existingTask) {
+      openTaskSheet(existingTask.dataset.moExistingTask);
       return;
     }
     const pillarBtn = e.target.closest('[data-mo-set-pillar]');
@@ -9745,38 +10960,43 @@ Content-Type: application/json
     if (dodSave) { moSaveDoD(dodSave.dataset.moDodSave); return; }
     const dodCancel = e.target.closest('[data-mo-dod-cancel]');
     if (dodCancel) { moCancelEditDoD(dodCancel.dataset.moDodCancel); return; }
-    // Multi-move next-move handlers
-    const addBtn = e.target.closest('[data-mo-move-add]');
-    if (addBtn) { moAddNextMove(addBtn.dataset.moMoveAdd); return; }
+    // Project name inline edit
+    const nameEdit = e.target.closest('[data-mo-name-edit]');
+    if (nameEdit) { moStartEditName(nameEdit.dataset.moNameEdit); return; }
+    // Move row controls
     const removeBtn = e.target.closest('[data-mo-move-remove]');
     if (removeBtn) {
       moRemoveNextMove(removeBtn.dataset.moMoveRemove, Number(removeBtn.dataset.moMoveIdx));
       return;
     }
-    // Brain-dump handlers
-    const brainOpen = e.target.closest('[data-mo-brain-open]');
-    if (brainOpen) { moOpenBrainDump(brainOpen.dataset.moBrainOpen); return; }
-    const brainCancel = e.target.closest('[data-mo-brain-cancel]');
-    if (brainCancel) { moCloseBrainDump(brainCancel.dataset.moBrainCancel); return; }
-    const brainExtract = e.target.closest('[data-mo-brain-extract]');
-    if (brainExtract) { moExtractBrainDump(brainExtract.dataset.moBrainExtract); return; }
+    // Composer
+    const composerAdd = e.target.closest('[data-mo-composer-add]');
+    if (composerAdd) { moComposerAdd(composerAdd.dataset.moComposerAdd); return; }
+    const composerParse = e.target.closest('[data-mo-composer-parse]');
+    if (composerParse) { moComposerParse(composerParse.dataset.moComposerParse); return; }
+    // Tapping anywhere outside an open date popover closes it
+    const anyDecisionWithOpenPicker = Object.entries(state.mondayOpen.decisions || {}).find(([_, d]) => d && d.openDatePicker != null);
+    if (anyDecisionWithOpenPicker && !e.target.closest('[data-mo-date-popover]') && !e.target.closest('[data-mo-move-date-toggle]')) {
+      anyDecisionWithOpenPicker[1].openDatePicker = null;
+      renderMondayOpen();
+    }
   });
   document.getElementById('monday-open-view').addEventListener('input', (e) => {
-    // Multi-move textareas
-    const moveId = e.target.dataset && e.target.dataset.moMoveInput;
-    if (moveId) {
+    // Per-move title textareas
+    const moveProjectId = e.target.dataset && e.target.dataset.moMoveInput;
+    if (moveProjectId) {
       const idx = Number(e.target.dataset.moMoveIdx || 0);
-      const d = state.mondayOpen.decisions[moveId];
-      if (d) {
-        while (d.next_moves.length <= idx) d.next_moves.push('');
-        d.next_moves[idx] = e.target.value;
+      const d = state.mondayOpen.decisions[moveProjectId];
+      if (d && Array.isArray(d.move_rows) && d.move_rows[idx]) {
+        d.move_rows[idx].title = e.target.value;
       }
       return;
     }
-    if (e.target.id && e.target.id.startsWith('mo-brain-dump-')) {
-      const projectId = e.target.id.replace('mo-brain-dump-', '');
+    // Composer textarea
+    if (e.target.id && e.target.id.startsWith('mo-composer-')) {
+      const projectId = e.target.id.replace('mo-composer-', '');
       if (state.mondayOpen.decisions[projectId]) {
-        state.mondayOpen.decisions[projectId].brainDumpText = e.target.value;
+        state.mondayOpen.decisions[projectId].composer = e.target.value;
       }
       return;
     }
@@ -9787,6 +11007,29 @@ Content-Type: application/json
       }
       return;
     }
+    if (e.target.id && e.target.id.startsWith('mo-name-edit-')) {
+      const projectId = e.target.id.replace('mo-name-edit-', '');
+      if (state.mondayOpen.decisions[projectId]) {
+        state.mondayOpen.decisions[projectId].nameDraft = e.target.value;
+      }
+      return;
+    }
+  });
+  // Name-input commit on Enter / blur (Escape cancels)
+  document.getElementById('monday-open-view').addEventListener('keydown', (e) => {
+    if (e.target.id && e.target.id.startsWith('mo-name-edit-')) {
+      if (e.key === 'Enter') { e.preventDefault(); moSaveName(e.target.id.replace('mo-name-edit-', '')); }
+      else if (e.key === 'Escape') { e.preventDefault(); moCancelEditName(e.target.id.replace('mo-name-edit-', '')); }
+    }
+  });
+  document.getElementById('monday-open-view').addEventListener('focusout', (e) => {
+    if (e.target.id && e.target.id.startsWith('mo-name-edit-')) {
+      // Defer so a click on another button (e.g. cancel) registers first
+      setTimeout(() => {
+        const d = state.mondayOpen.decisions[e.target.id.replace('mo-name-edit-', '')];
+        if (d && d.editingName) moSaveName(e.target.id.replace('mo-name-edit-', ''));
+      }, 100);
+    }
   });
   document.getElementById('monday-open-view').addEventListener('change', (e) => {
     const taskSelect = e.target.dataset && e.target.dataset.moTaskSelect;
@@ -9794,9 +11037,21 @@ Content-Type: application/json
       const assign = state.mondayOpen.taskAssignments[taskSelect];
       if (assign) {
         assign.project_id = e.target.value || null;
-        // Re-render so Map button enables/disables based on selection
         renderMondayOpen();
       }
+      return;
+    }
+    // Project Due native date input
+    const dueInput = e.target.dataset && e.target.dataset.moDueInput;
+    if (dueInput) {
+      moSaveDue(dueInput, e.target.value || null);
+      return;
+    }
+    // Per-move "Other…" native date input
+    const otherDate = e.target.dataset && e.target.dataset.moMoveDateOther;
+    if (otherDate) {
+      moSetMoveDate(otherDate, Number(e.target.dataset.moMoveIdx), e.target.value || null);
+      return;
     }
   });
   document.getElementById('mo-switch-flow').addEventListener('click', () => showView('friday-close'));
@@ -10018,6 +11273,33 @@ Content-Type: application/json
       sendTaskToReminders(state.taskSheet.taskId);
       return;
     }
+    if (e.target.closest('#task-sheet-clear-do-date')) {
+      saveTaskDoDateFromSheet('');
+      return;
+    }
+    const effortChip = e.target.closest('[data-set-effort]');
+    if (effortChip) {
+      saveTaskEffortFromSheet(effortChip.dataset.setEffort);
+      return;
+    }
+    if (e.target.closest('#task-sheet-edit-notes')) {
+      state.taskSheet.notesEditing = true;
+      renderTaskSheet();
+      setTimeout(() => {
+        const ta = document.getElementById('task-sheet-notes-input');
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }, 0);
+      return;
+    }
+    if (e.target.closest('#task-sheet-cancel-notes')) {
+      state.taskSheet.notesEditing = false;
+      renderTaskSheet();
+      return;
+    }
+    if (e.target.closest('#task-sheet-save-notes')) {
+      saveTaskNotesFromSheet();
+      return;
+    }
   });
   document.getElementById('task-sheet').addEventListener('change', (e) => {
     if (e.target.id === 'task-sheet-do-date') {
@@ -10113,6 +11395,24 @@ Content-Type: application/json
     }
     if (e.target.closest('#pd-save-outcome')) {
       saveOutcome();
+      return;
+    }
+    if (e.target.closest('#pd-edit-notes')) {
+      state.detail.notesEditing = true;
+      renderProjectDetail();
+      setTimeout(() => {
+        const ta = document.getElementById('pd-notes-input');
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }, 0);
+      return;
+    }
+    if (e.target.closest('#pd-cancel-notes')) {
+      state.detail.notesEditing = false;
+      renderProjectDetail();
+      return;
+    }
+    if (e.target.closest('#pd-save-notes')) {
+      saveProjectNotes();
       return;
     }
     if (e.target.closest('#pd-due-btn')) {
@@ -10230,6 +11530,7 @@ Content-Type: application/json
       ]);
       state.projects = projects || [];
       state.goals = goals || [];
+      invalidateAreaPillarMap(); // rebuild from fresh project rows on next read
       // Most recent dismissal per project wins (fetch already sorted desc)
       const dismissals = {};
       (stalls || []).forEach(s => {

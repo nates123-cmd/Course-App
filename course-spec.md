@@ -65,7 +65,9 @@ Claude is the steady second voice in the cockpit, not a chatty assistant.
 Course's Supabase tables (after the one-time Notion import):
 
 **projects**
-- id, name, outcome, status (active/idea/paused/done/archived/routine/under_review), priority (low/medium/high), start_date, due_date, completed_date, pillar (tag string), work_area (tag string), goal_id (FK), notion_url, progress_pct (int 0–100, nullable — manual override; when null Project Detail falls back to computed % of tasks done), created_at, updated_at, last_activity_at
+- id, name, outcome, **notes** (free-form text, nullable — long-form context/scratch separate from `outcome`/Definition of Done), status (active/idea/paused/done/archived/routine/under_review), priority (low/medium/high), start_date, due_date, completed_date, pillar (tag string), work_area (tag string), goal_id (FK), notion_url, progress_pct (int 0–100, nullable — manual override; when null Project Detail falls back to computed % of tasks done), created_at, updated_at, last_activity_at
+
+`notes` vs `outcome`: `outcome` is the Definition of Done (the finish line, one sharp statement); `notes` is everything else — context, links, open questions, scratch thinking. They're deliberately separate fields so the DoD stays uncluttered. "Ideas" are just projects with `status='idea'`, so they get notes via the same field — no separate ideas table.
 
 **tasks**
 - id, project_id (FK, nullable), title, status (triage/next/in_progress/waiting/done/dropped), do_date, completed_date, effort (15m/30m/1h/2h+), work_type (scheduled/deep/admin), type (home/away), notes, person_dependency, reminders_uuid (for tracking what was pushed), notion_url (for status writebacks), created_at, updated_at
@@ -86,6 +88,25 @@ Course's Supabase tables (after the one-time Notion import):
 - id, project_id (FK), flagged_at, last_question, dismissed_at
 
 **Pillars and Work Areas** live as **tag strings** on projects, not separate tables. Aggregation happens at query time. Pillar colors are configured in app settings and stored client-side (5 slots: arrow/sunny/side/d/e).
+
+### Pillar vs Area — the formal model
+
+These two concepts are deliberately distinct and must not be conflated:
+
+- **Pillar** — a *top-level life domain*. There are a small, fixed set (Arrow = work, Sunny = personal/wellness, Life = life-admin/other; two reserved slots). A Pillar is the highest grouping in every Course surface (dashboard "By Pillar", Monday Open walk order, Pulse grouping). Pillars are stable — they rarely change.
+- **Area** (a.k.a. Work Area) — a *sub-grouping inside exactly one Pillar*. Examples: "Casablanca" and "Hiring" are Areas under the Arrow pillar; "Fitness" is an Area under Sunny. An Area belongs to **one and only one** Pillar. Areas are numerous and fluid.
+
+**The hierarchy is strict: Pillar → Area → Project/Task.** Every Area maps up to exactly one Pillar. Every Project has at most one Area and at most one Pillar. A Task inherits its Pillar/Area from its parent Project; an orphan Task may carry its own `work_area` string.
+
+**Derivation rule (single source of truth).** A Project's Pillar is *derived from its Area* via the **Area→Pillar map**, which is established during Setup Step 2 (each Notion Area's `Pillar` relation, user-overridable) and persisted client-side (`course_area_pillar_map` in localStorage). The map is the authority. Concretely:
+
+- When a Project has an Area, its effective Pillar = `areaPillarMap[area]` (the stored `pillar` column is a denormalized cache, refreshed on Setup/import and on inline Area edits).
+- When a Project has no Area, its Pillar is whatever was set directly (manual pillar pick), else "no pillar".
+- An orphan Task's Pillar = `areaPillarMap[task.work_area]` when resolvable, else none.
+
+All Pillar resolution in code goes through one helper (`pillarForArea(area)` / `effectivePillar(projectOrTask)`) so the rule lives in exactly one place. Aggregations, Monday Open ordering, and Pulse grouping all call it rather than reading `.pillar` directly.
+
+**Why formalize:** earlier surfaces sometimes treated Area and Pillar as interchangeable free-text tags, which produced inconsistent grouping (a project showing under its Area name in one view and its Pillar in another). The map + single helper removes the ambiguity without introducing separate DB tables (still tag strings on rows; the structure lives in the map).
 
 ---
 
@@ -129,6 +150,8 @@ Each day header includes:
 - **Effort budget** — sum of effort pill values (15m=15, 30m=30, 1h=60, 2h+=120), shown as `~Xh`. Total > 5h dims to muted amber as a soft warning. Recomputes on every add / edit / reorder / push.
 - **Inline `+` button** — taps to expand a text input below the header. Enter saves a new task with `do_date` set to that day, `status='triage'`, `effort='30m'`, `work_type='admin'`, `project_id=null`, and `day_order = max(day_order)+1` for that day. After save the input clears + retains focus for fast batch entry. Escape closes.
 
+**Day overload advisory.** The dimmed budget is too subtle when a day is genuinely overcommitted. When a day section crosses *any* of these thresholds — total effort **> 6h**, **> 8 tasks**, or work spread across **> 4 distinct projects** — Course renders a soft advisory banner directly under the day header (risk-tinted left border, not a modal, not blocking). It states the concrete numbers and a single recommendation, e.g. *"Today is heavy: 11 tasks, ~7.5h, across 6 projects. Consider pushing the lowest-priority project's tasks to a lighter day, or focus one project and triage the rest."* The recommendation is deterministic in V1 (template chosen by which threshold(s) tripped); it does not call Claude. The banner is informational — it does not auto-act. It disappears on its own once the day drops back under threshold (after the user pushes/triages). Only ever shown for Today and Tomorrow (the actionable horizon), never for "No date".
+
 **Tasks within each day** — Date is the primary axis (user's workflow is date-driven). Under each day header, tasks render in two sub-groups:
 - **Unscoped** — tasks with no project, flat list first
 - **By project** — tasks grouped under a project header (Pillar dot + project name + count + sub-budget), clickable to jump to Project Detail.
@@ -154,13 +177,14 @@ Bottom-sheet overlay invoked from any task row in either Tasks Mode or Project D
 - **Project** — typeahead input backed by a `<datalist>` of all projects. Type to filter; pick an option to assign; clear to unassign. Typing an unknown name + Enter/blur → confirms and *creates* a new project (`status='idea'`), retroactively links this task to it, then jumps to the new project's detail page. Also shows an "Open [project] →" chip when one is assigned.
 - **Work area** — same typeahead pattern as Project, backed by your imported Areas plus any free-text values already present on projects. No create-new branch; just save the typed value.
 - **Status** — chip + tap-to-open picker with all 6 task statuses (Triage / Next / In Progress / Waiting / Done / Dropped). Save writes to Supabase + writes back to Notion's `Task Status` (with `Complete=true` on Done).
-- **Do date** — native date picker. Save writes to Supabase + writes back to Notion's `Do date`.
+- **Do date** — native date picker **with a "Clear" button beside it**. Setting a date or clearing it both save to Supabase + write back to Notion's `Do date` (clear → Notion date set to null). Clear exists because native date inputs have no reliable cross-platform "empty" affordance, and "this task has no scheduled day" is a legitimate, common state (it drops the task into the date-driven backlog rather than a day).
+- **Effort** — a row of four chips (`15m` / `30m` / `1h` / `2h+`) plus a "Clear" chip. Tapping a chip sets `course_tasks.effort`; tapping the current one or "Clear" unsets it. Persists immediately. This is the same field the Tasks-mode effort pill cycles, surfaced here so effort can be set from any context where the Task Sheet opens (Project Detail, Monday Open open-tasks, Pulse), not only by cycling in Tasks mode. No Notion writeback (Effort is a Course-side planning field).
 - **Meta chips** — type, person dependency (display, V1)
-- **Notes** — display, V1
+- **Notes** — **inline editable**. Shows the note text (or "Add a note…" when empty) with an Edit/Add control; tapping opens a textarea with Save/Cancel that writes `course_tasks.notes`. Course-only, no Notion writeback (free-form notes have no stable Notion property; Course owns them). Works from every surface the Task Sheet opens (Tasks mode, Project Detail, Monday Open open-tasks, Pulse).
 
 Notion writebacks for project/work_area re-assignment are deferred — relation writebacks need Notion page IDs we don't keep in state. Course is authoritative; Notion drifts on those relations until selective re-import.
 
-Closes via X button, backdrop click, or Esc. V1.1 will add inline editing for title and notes.
+Closes via X button, backdrop click, or Esc. V1.1 will add inline editing for title.
 
 ### 3. Project Detail
 
@@ -175,6 +199,8 @@ What you see when you tap a project from the dashboard.
 **Status chip** — Sits between the title and the Definition of Done block. Shows the current status (Active / Idea / Paused / Routine / Under Review / Done / Archived) with a caret. Tap → inline chip picker appears below; tap an option → saves to `course_projects.status` and writes back to Notion's `Status` select. Active gets accent-color; Done gets sage; Paused/Archived are muted.
 
 **Definition of Done block** — Small dedicated card. "DEFINITION OF DONE" label, then the statement in body text. This is the navigation star — what success/completion looks like. Inline editable; saves to `course_projects.outcome` (DB field name preserved) and writes back to Notion's `Outcome` rich_text property.
+
+**Notes block** — A second small card directly below Definition of Done, same anatomy: "NOTES" label + Edit/Add control, body text (or "Add a note…" muted placeholder when empty), tap → textarea with Save/Cancel. Saves to `course_projects.notes`. This is the free-form context layer — links, open questions, scratch thinking — kept separate from the DoD so the finish line stays sharp. Course-only, **no Notion writeback** (notes are freeform and have no stable Notion property; this is the field where Course, not Notion, owns the long-form layer). Because ideas are projects with `status='idea'`, idea projects get the same Notes block — no separate surface needed.
 
 **Meta row** — Three small cells: Due / Progress / Last move. Due is inline editable (opens the native date picker).
 
@@ -224,23 +250,47 @@ Guided weekly setup flow. Push notification fires Monday morning at user-set tim
 
 **Progress bar** at top showing position in the flow.
 
-**Step meta** — "Project 2 of 7" + "Save & exit" link.
+**Step meta** — Counts *down*: `"5 projects left"` while walking projects (excludes the current project from the count). Falls through to `"Orphan tasks"` and `"Review"` on the final steps. "Save & exit" link sits on the right.
 
-**Flow header** — "MONDAY OPEN" label, "Set the week" title, subtitle explaining the format.
+**Flow header** — "MONDAY OPEN" label + "Set the week" title. No subtitle — the flow is self-explanatory and the user doesn't need a reminder of the format on every screen.
 
-**Current project card** — Pillar lineage strip, project name, state row (Due / % done / quiet days), outcome reminder below a divider.
+**Current project card** — Pillar lineage strip, **editable project name** (tap → inline input → PATCH `name` + Notion writeback), state row (**editable Due** chip / % done / last move), outcome reminder below a divider.
 
-**Project order** — Active projects are sorted by Pillar (Arrow → Sunny → Life → other) → Work Area (alphabetical) → name. A section banner above each project card shows `PILLAR · Area · N of M` so the user always sees which area they're walking through.
+**Project order** — Active projects are sorted by Pillar (Arrow → Sunny → Life → other) → Work Area (alphabetical) → name. A section banner above each project card shows `PILLAR · Area · N of M` so the user always sees which area they're walking through. **Decisioned-then-revisited projects** (when navigating back) get a sage ✓ chip next to the position counter so the user can see they've already committed a decision for this one.
 
-**Three questions per project:**
+**Two questions per project** (down from three — see "Per-move scheduling" below):
 
 1. **Still active this week?** — Chips: Yes / Push / Drop
-2. **What's the one next move?** — Claude-suggested next move in a small bordered row with "Use ›" button (pre-fills the input). Textarea below for user edit/override.
-3. **When this week?** — Day-of-week chips: Today / Tue / Wed / Thu / Fri (auto-skips weekends based on what "today" is)
+   - **Yes** — project stays active, gets the next-move tasks committed.
+   - **Push** — sets `status='idea'`. Project drops off the active walk; resurfaces only via Worth-a-Look (V2) or the user editing it back to active.
+   - **Drop** — sets `status='archived'`. Project disappears from Course's surfaces.
+2. **What's the next move(s) this week?** — Suggested move from Claude in a small bordered row with "Use ›" (appends to the list). Below that: any moves already added (one row each, with a tiny day chip + 📲 reminders button per row), then a **unified composer** at the bottom: one textarea with two actions — `+ Add` (treats the whole text as one move) and `↻ Parse` (sends the text to Claude to extract multiple moves). The previous separate "Brain Dump" panel is gone.
 
-**Per-pillar orphan task review (interleaved with projects).** After walking each pillar's projects, the wizard inserts a step that shows the orphan tasks whose `work_area` maps to that pillar (via any project's pillar/area link). User reviews tasks in the *pillar context that just got reviewed* — sees an Arrow task right after thinking through Arrow projects, when their context is fresh. Each row has a project dropdown (pre-filled with Claude's pick, scoped to projects in this pillar) + a Map button. Tasks without a discernible pillar end up in a final catch-all task step before the summary.
+**Per-move scheduling.** Each next-move row carries its own day chip — defaults to today, picker offers Today / Tue / Wed / Thu / Fri / Sat / Sun + an "Other…" native date input for things further out. The previous Question 3 ("When this week?") is removed; date lives on each move, not on the project decision. The schedule's commit semantic stays the same: each move becomes its own `course_tasks` row with `status='next'`, `project_id=current project`, and `do_date=row's date`.
 
-The single-screen task review at the very end is no longer the pattern — split per pillar so the user reviews in context.
+**Per-move Reminders push.** Each next-move row has a 📲 button. Tap → Course commits *that move's* task immediately (so it has an id, project, and due date), then fires the existing `CourseAddReminder` Apple Shortcuts deeplink with the title/date/project payload. After push, the move row shows "✓ Sent" and the task's `status` flips to `pushed` (mirroring Reminders ownership). This lets the user fire off thin tasks to Reminders mid-flow without leaving Monday Open.
+
+**Open tasks block** — Above the decision chips, Course shows the project's existing open tasks (cached during suggestion fetch). Each row is **editable**: tap the row body → opens the Task Sheet (the same one used everywhere else). Date column always renders ("no date" italic when null). The checkbox on the left still marks done in place.
+
+**Add a new project mid-flow.** Monday Open isn't only a walk of existing active projects — new commitments surface *during* the weekly think. A persistent **"+ New project"** action sits in the flow (above the bottom nav). It opens an inline form: name (required), Definition of Done (optional), and a Pillar/Area picker. On save, Course POSTs the project with `status='active'`, inserts it into the in-flow project list and the step sequence (at the end of its Pillar group, or end of the project walk if no pillar), initializes its decision (default `yes`), and jumps straight to its project step so the user can set next moves immediately. The new project also lands on the dashboard like any other.
+
+**Idea-stage review step.** After the active-project walk (and before the summary), Course inserts a single **Idea review** step listing all `status='idea'` projects (these include anything Pushed in prior weeks). It's deliberately lightweight — no next-move capture, just a triage decision per idea with three chips:
+
+- **Activate** — `status='active'` (+ Notion writeback). The idea becomes a real commitment; it'll appear in next week's active walk. (V1 doesn't retroactively inject it into *this* week's walk — Activate is a declaration, not a same-session task-capture.)
+- **Keep idea** — no-op; stays `idea`, resurfaces next Monday.
+- **Drop** — `status='archived'` (+ writeback).
+
+This is the V1 seed of the V2 "Worth a Look" idea-resurfacing surface — it gives backburned ideas a guaranteed weekly moment without forcing them into the active view.
+
+**Orphan task review — monthly cadence, capped.** Reviewing every loose unscoped task every single week is noise: many orphan tasks are deliberately thin and belong in Reminders, not in a weekly project triage. So:
+
+- The per-pillar orphan-task review steps are included **only on the first Monday Open of the calendar month** (tracked by checking whether a committed `course_reviews` monday_open row exists for any earlier week in the current month — first run of the month = include).
+- Even then, the orphan set is **capped at 12 tasks**, prioritized by oldest `do_date` (nulls last) then highest reschedule count — the ones most likely to be genuinely stuck, not just thin.
+- On off-month Mondays the orphan steps are skipped entirely; the summary shows a quiet line: "Orphan task review is monthly — next on <first Monday of next month>."
+
+When included, the review still works per-pillar (interleaved with that pillar's projects): the user reviews orphan tasks in the *pillar context that just got reviewed*. Each row has a project dropdown (pre-filled with Claude's pick, scoped to projects in this pillar) + a Map button. Tasks without a discernible pillar end up in a final catch-all task step before the summary. The single-screen task review at the very end is no longer the pattern — split per pillar so the user reviews in context.
+
+**Undo a just-committed project decision.** Because effects commit incrementally on each Next (tasks created, status flipped to archived/idea), an accidental Drop/Push or a wrong set of moves needs a fast escape hatch. After each project step's Next commits, Course shows a toast: *"Committed <project>. Undo"* (≈6s). Undo reverts that single project's commit — deletes the tasks it created (except any already pushed to Reminders, which stay, since they now live in the user's Reminders), restores the project's prior `status` (+ reverses the Notion writeback), clears the decision's `timestamp`, and steps the flow back to that project. It's the same revert machinery the idempotent re-commit already uses, exposed as an explicit user action.
 
 **Sticky bottom nav** — `‹ Back` + `Next project ›` primary button.
 
@@ -254,21 +304,33 @@ Decisions stored in `reviews` table on completion. Output: defined week, schedul
     {
       "project_id": "uuid",
       "decision": "yes" | "push" | "drop",
-      "next_moves": ["short imperative", "another"],
-      "scheduled_day": "today" | "tue" | "wed" | "thu" | "fri" | null,
+      "moves": [
+        { "title": "short imperative", "do_date": "YYYY-MM-DD" }
+      ],
       "timestamp": "ISO 8601 timestamp"
     }
   ]
 }
 ```
 
-Each entry corresponds to one project the user reviewed during the flow. `next_moves` is an *array* — Monday Open supports multiple next moves per project (Add another button, plus a paragraph→Claude extractor that turns a brain dump into discrete entries). Each entry becomes its own `course_tasks` row on commit. `scheduled_day` applies to the whole array (V2 may add per-move scheduling). `timestamp` is the moment the user committed that project's decision (when they tapped Next from that project's step). This lets future queries answer questions like "how many consecutive Monday Opens has Project X been pushed?" without having to reconstruct from the full review narrative.
+Each entry corresponds to one project the user reviewed during the flow. `moves` is an *array* of `{ title, do_date }` pairs — Monday Open supports multiple next moves per project (added one at a time, or via the unified composer's paragraph→Claude extractor). Each entry becomes its own `course_tasks` row on commit with `do_date` taken from the move record. `timestamp` is the moment the user committed that project's decision (when they tapped Next from that project's step). This lets future queries answer questions like "how many consecutive Monday Opens has Project X been pushed?" without having to reconstruct from the full review narrative.
+
+Idea-review decisions are recorded alongside, under a separate `idea_decisions` key so they don't pollute the active-project history used by Resurfacing pattern detection:
+
+```json
+{
+  "decisions": [ /* …active project records as above… */ ],
+  "idea_decisions": [
+    { "project_id": "uuid", "decision": "activate" | "keep" | "drop", "timestamp": "ISO 8601" }
+  ]
+}
+```
 
 **Definition of Done — inline editable.** The project card's DoD section is tap-to-edit. Empty DoD shows "No Definition of Done set. Tap to add." Saving PATCHes `course_projects.outcome` and fires the Notion writeback. Editing this from Monday Open is the friction-removing path: when a project lacks a DoD, you can fix it without leaving the flow.
 
 **Auto-save per step.** Every Next, Back, decision change, next-move add/remove, suggestion accept, task-map, and Save & exit writes the in-progress flow to `localStorage` keyed by the current Monday's date (`course_monday_open_draft_<week_of>`). On re-entry, the draft is merged over the freshly-initialized defaults — step, decisions, and task assignments restore exactly where you left off. The draft clears automatically on successful commit. Closing the tab, refreshing, or tapping Save & exit all preserve progress.
 
-**Incremental commits.** Each Next click and Save & exit pushes *that step's* effects to Supabase immediately — not at the final summary. For a project step: tasks are created from `next_moves`, project is archived if Drop, the `course_reviews` row is upserted with the latest `decisions_json`. For the task-review step: orphan-task → project assignments are PATCHed. Going Back to a previously-committed project step and tapping Next again is idempotent — the prior commit's tasks are deleted (and archive reverted if applicable) before re-applying. The final summary step is now confirmation-only; effects are already in place.
+**Incremental commits.** Each Next click and Save & exit pushes *that step's* effects to Supabase immediately — not at the final summary. For a project step: tasks are created from the move rows, project status is flipped per the decision (Drop→archived, Push→idea), the `course_reviews` row is upserted with the latest `decisions_json`. For the idea-review step: each idea's status change is PATCHed (+ writeback). For the task-review step: orphan-task → project assignments are PATCHed. Going Back to a previously-committed project step and tapping Next again is idempotent — the prior commit's tasks are deleted (and status reverted if applicable) before re-applying. The final summary step is now confirmation-only; effects are already in place. The per-step Undo toast (above) is the user-facing handle on this same revert path.
 
 ### 6. Friday Close
 
@@ -285,6 +347,8 @@ Guided weekly closeout. Push notification fires Friday afternoon at user-set tim
 **Moved section** — Projects that progressed, with +% gains in good color.
 
 **Slipped section** — Projects that stalled or fell short of Monday's plan, in risk color.
+
+**Didn't get done section** — The honest accountability view: what was *committed Monday and remains undone*. Course reads this week's `course_reviews` monday_open `decisions_json`, takes every project with `decision='yes'`, and checks each committed move's task. A move "didn't get done" if its `course_tasks` row is still open (not `done`, not `dropped`) or was pushed past `weekEnd`. The section lists each such project with its specific unfinished move titles ("Confirm Casablanca lease terms — still open"), plus any active project that had **zero task completion all week** (the pure no-movement case the old Slipped heuristic approximated). This is distinct from Slipped: Slipped is "stale by idle-days"; Didn't-get-done is "you said you would, and didn't." Both feed The Read so Claude's narrative can be specific about broken commitments rather than vague.
 
 **Three closing questions** (textareas, longer-form than Monday's chips):
 1. **What to drop?** — placeholder: "Be honest — what's not yours this season…"
@@ -455,11 +519,13 @@ V1 launches standalone. Cross-app reads activate as those apps' Supabase tables 
 
 1. **Setup Flow** (one-time): opt-in archive/drop writebacks per item via bulk-archive toggles.
 2. **Ongoing field writebacks** (Course → Notion, one-way, best-effort): when the user edits certain fields on a project or task in Course, the change propagates back to Notion. Course is the source of truth; Notion is the readable archive. Currently writeback-supported fields:
-   - **Project status** → Notion Projects DB `Status` select (active→Active, idea→Idea, paused→Paused, done→Done, archived→Archived, routine→Routine, under_review→Under Review)
-   - **Project outcome** → Notion Projects DB `Outcome` rich_text. Inline editable from Project Detail (UI labeled "Definition of Done").
-   - **Project due date** → Notion Projects DB `Due` date. Inline editable from Project Detail's meta-row Due cell (native date picker).
+   - **Project status** → Notion Projects DB `Status` select (active→Active, idea→Idea, paused→Paused, done→Done, archived→Archived, routine→Routine, under_review→Under Review). Monday Open's Push flips status to `idea`; Drop flips to `archived`. Both fire writebacks.
+   - **Project name** → Notion Projects DB title property. Inline editable from Monday Open's project card (tap the project name → input).
+   - **Project outcome** → Notion Projects DB `Outcome` rich_text. Inline editable from Project Detail (UI labeled "Definition of Done") and Monday Open.
+   - **Project due date** → Notion Projects DB `Due` date. Inline editable from Project Detail's meta-row Due cell *and* Monday Open's state row Due chip (both use the native date picker).
    - **Task status** → Notion Tasks DB `Task Status` select (triage→Triage, next→Next, in_progress→In Progress, waiting→Waiting, done→Done, dropped→Dropped). When status flips to `done`, Course also sets `Complete=true` on the Notion page (keeps Notion's existing Complete-checkbox-driven workflow consistent).
    - Goals have no editable Status/Outcome properties in the user's Notion Core Goals DB — writebacks skip goals.
+   - **Project notes** and **Task notes** are Course-only — deliberately *not* written back. Notes are the free-form layer Course owns outright; there's no stable Notion property to target and round-tripping freeform text invites drift. (Effort is also Course-only, for the same "Course-side field" reason.)
 
 The writeback scope expands as more inline editors are added in Course (project name, due date, task do-date, etc.). New writebacks should always be Course → Notion one-way, best-effort, and listed here.
 
@@ -588,6 +654,36 @@ Surfaces enriched (priority order):
 Schema notes for V1 readiness: when Course imports from Notion in V1, store the original Notion page IDs not just URLs. This enables tag-querying via the Notion API later without needing to re-resolve URLs to IDs. Specifically: add `notion_page_id TEXT` alongside `notion_url` on projects, goals, and (if applicable) tasks.
 
 Depends on: Notion API tag-query support (already exists), plus the Notion proxy Edge Function (already in V1).
+
+**The Course Bar — conversational task editing via the capture field.**
+
+The bottom capture field becomes a universal command line. User types natural language; Course classifies the intent and routes to the right action with confirm-gated execution.
+
+Four input types Course should recognize:
+
+1. **Capture** (default) — "thought about the Moroccan EP arrangement" → lands in `captures` table for processing
+2. **Command** — "move ECS summary to tomorrow", "drop my UK trip prep tasks", "mark all music tasks as Side Gigs" → proposes a confirm card with the parsed action; on confirm, executes via Supabase PATCH + Notion writeback
+3. **Question** — "what did I commit to last Monday?", "what's stalled?" → Claude reads relevant data and answers in a small inline response
+4. **Slash command** (explicit) — "/add task draft onboarding doc" → skips classification, executes directly with the explicit intent
+
+Classification approach: **cautious by default**. Anything ambiguous classifies as capture (the safe default — lands in inbox, no destructive action). Clear commands ("move", "drop", "push", "mark as", "add task") get parsed as commands. Questions get routed to Q&A. Slash syntax bypasses classification.
+
+Validation: Same agent-loop safety rails as V1's One Question card. Claude proposes; user confirms; execution validates that referenced task/project IDs actually exist before any writes happen. No invented IDs, ever.
+
+UX details:
+- Placeholder text becomes context-aware to teach the feature: "Capture, or 'move ECS to Thu'…"
+- Confirm card appears inline below the field — not a modal, not a navigation
+- Confirmed actions show "✓ Done" briefly and the affected UI updates in place
+- Failed parses ("I'm not sure what you meant — capture this instead?") default to capture
+
+Depends on:
+- V1 One Question agent loop (proves the propose → confirm → execute pattern)
+- V1 capture inbox pipeline (already exists)
+- Claude classifier prompt that reliably distinguishes the four input types
+
+Why V2: needs the V1 patterns to be battle-tested first. Also: trust must be established — users won't trust Course to act on typed input until they've seen the One Question card act safely on its own proposals over weeks. Building this in V1 risks surprising the user with unexpected actions before they've calibrated trust.
+
+This pattern is potentially Course's most differentiated long-term feature. Most project apps require users to learn the UI. The Course Bar lets the user just say what they want.
 
 ---
 

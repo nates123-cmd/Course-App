@@ -19,6 +19,7 @@ create table course_projects (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   outcome text,
+  notes text,
   status text not null default 'active'
     check (status in ('active','idea','paused','done','archived','routine','under_review')),
   priority text check (priority in ('low','medium','high')),

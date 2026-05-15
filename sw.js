@@ -1,4 +1,4 @@
-const CACHE_NAME = 'course-v16';
+const CACHE_NAME = 'course-v17';
 const STATIC_ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
