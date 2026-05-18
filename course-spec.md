@@ -135,7 +135,16 @@ The home view. Top to bottom:
 
 **Capture field** — Sticky at bottom: amber `+` icon + "Capture a thought…" placeholder.
 
-### 2. Dashboard — Tasks mode
+### 2. Dashboard — Today view
+
+The day-execution surface. The mode-toggle segment is labelled **Today** (the internal code mode value stays `'tasks'` to avoid a churny rename; UI says Today everywhere). V1 visual baseline is `course-dashboard-tasks.html` (project-grouped task list under day headers, per-row reminder button) — built *with* all the evolved extras kept (sort/filter bar, Weekend tile, collapsible project sub-groups, day overload advisory, No-date section), not stripped back to the bare mockup.
+
+**V1 → V2 structural compatibility.** The richer `course-proposed-day.html` (capacity tracker, "The Read", Deep/Admin split, priority badges, Pushed-with-reason section, day-actions footer) is a *future additive regroup*, not a rewrite. V1 is built so V2 drops in cleanly:
+- The renderer is layered `bucketByDay → groupStrategy(tasks) → renderTaskRow(task)`. V1 ships `groupStrategy = by-project`; V2 adds `by-work-type` (Deep Work / Admin) without touching bucketing or row rendering.
+- The Pulse card and V2's "The Read" are the **same container** (elevated bg, 3px accent left-border, label + body) — data-driven label/content, so V2 swaps the source, not the markup.
+- V1's stats row and V2's capacity tracker occupy the **same grid slot** — one replaceable block.
+- `renderTaskRow` stays pure (task in → markup out) so V2's priority badge / priority-reason / project·pillar line are additive props.
+- V2-only schema (priority order + `priority_reason`, `pushed_reason`, per-user capacity targets, a "The Read" cache — can reuse `pulses`) is *not* added in V1 but the pipeline passes full task objects so it's additive later. `day_order` already exists in `schema.sql` (no migration was ever needed for reorder).
 
 Same chrome (header, goals strip collapsed by default, mode toggle), different content:
 
@@ -143,12 +152,19 @@ Same chrome (header, goals strip collapsed by default, mode toggle), different c
 
 **Stats** — Today / This week / Done today (replaces Active / At Risk / Done this wk)
 
-**Day headers** — Today (amber, highlighted) and Tomorrow (muted). Horizon ends at tomorrow. Anything further out lives in Project Detail. Tasks mode is *execution*, not planning.
+**Day headers** — Today (amber, highlighted), Tomorrow (muted), and **Weekend** (accent-tinted). Horizon ends at the upcoming weekend; anything further out lives in Project Detail. Tasks mode is *execution*, not planning — but the weekend is close enough to act on, and the old "ends at Tomorrow" rule meant tasks deliberately scheduled for Saturday/Sunday (e.g. via Monday Open's weekend chips) silently vanished from Tasks mode all week. The Weekend tile closes that gap.
+
+**Weekend tile.** A dedicated section, ordered after Tomorrow and before No-date, that collects tasks whose `do_date` falls on the *upcoming* Saturday or Sunday. Rules:
+- "Upcoming weekend" = the nearest Sat + Sun. On a weekday (Mon–Fri) that's this coming weekend; the tile is **always visible** (like Today/Tomorrow) so weekend work is never hidden and you can quick-add into it.
+- Bucketing is exclusive and dedupe-safe: Today (`do_date ≤ today`) and Tomorrow (`do_date == tomorrow`) win first, so a Saturday task on a Friday still shows under Tomorrow, not twice. Weekend only catches weekend dates strictly beyond Tomorrow.
+- On Saturday/Sunday themselves the weekend *is* Today/Tomorrow, so the tile only renders if it actually has tasks (no redundant empty tile).
+- Quick-add in the Weekend tile defaults to **Saturday** when Saturday is still beyond Tomorrow, otherwise **Sunday** (so a Friday quick-add lands on Sunday and stays in the tile rather than jumping to Tomorrow).
+- Label reads `Weekend · M/D–M/D` (the Sat–Sun span). Same row anatomy, swipe, collapse, sort/filter, and footer as the other day sections. It does **not** get the overload advisory (that stays Today/Tomorrow only — the weekend is planning headroom, not the immediate execution horizon).
 
 Each day header includes:
 - Day label + count: `Today · Wed May 13 · 5`
 - **Effort budget** — sum of effort pill values (15m=15, 30m=30, 1h=60, 2h+=120), shown as `~Xh`. Total > 5h dims to muted amber as a soft warning. Recomputes on every add / edit / reorder / push.
-- **Inline `+` button** — taps to expand a text input below the header. Enter saves a new task with `do_date` set to that day, `status='triage'`, `effort='30m'`, `work_type='admin'`, `project_id=null`, and `day_order = max(day_order)+1` for that day. After save the input clears + retains focus for fast batch entry. Escape closes.
+- **Always-visible inline add + `+` affordance.** The quick-add text input is *always visible* at the top of every day section (an evolved change, kept). The day header also carries a `+` affordance whose sole job is to focus that section's input (a discoverability cue / fast-jump — it does **not** toggle the input's visibility, since the input is never hidden). Enter saves a new task with `do_date` set to that day (Weekend → its quick-add target date), `status='triage'`, `effort='30m'`, `work_type='admin'`, `project_id=null`, and `day_order = max(day_order)+1`. After save the input clears + retains focus for fast batch entry. Escape blurs.
 
 **Day overload advisory.** The dimmed budget is too subtle when a day is genuinely overcommitted. When a day section crosses *any* of these thresholds — total effort **> 6h**, **> 8 tasks**, or work spread across **> 4 distinct projects** — Course renders a soft advisory banner directly under the day header (risk-tinted left border, not a modal, not blocking). It states the concrete numbers and a single recommendation, e.g. *"Today is heavy: 11 tasks, ~7.5h, across 6 projects. Consider pushing the lowest-priority project's tasks to a lighter day, or focus one project and triage the rest."* The recommendation is deterministic in V1 (template chosen by which threshold(s) tripped); it does not call Claude. The banner is informational — it does not auto-act. It disappears on its own once the day drops back under threshold (after the user pushes/triages). Only ever shown for Today and Tomorrow (the actionable horizon), never for "No date".
 
@@ -172,15 +188,16 @@ Within each sub-group, tasks sort by the current **sort key** (below); default i
 
 This is the general principle: **wherever Course shows a list, sort and filter should be available rather than a fixed order.** Tasks mode is where it lands first because that's the densest list; Projects mode reuses the same pattern as it grows.
 
-### Task row interactions (Tasks Mode)
+### Task row interactions (Today view)
 
 - **Tap on task title / body area** → if task has a project, jump to Project Detail; if unscoped, open Task Sheet for editing.
 - **Tap checkbox** → toggle done, with undo toast (5s).
 - **Tap work type chip** (`Deep` / `Admin` / `Scheduled`) → cycles to next in order Deep → Admin → Scheduled → Deep. Persists immediately.
 - **Tap effort pill** (`15m` / `30m` / `1h` / `2h+`) → cycles in same way. Persists immediately.
+- **Per-row reminder button** (`Send` → `✓ Sent`) — right-aligned in the row's action area. Tap fires the existing `CourseAddReminder` Apple Shortcuts deeplink for that task and marks it (`reminders_uuid` set, status → `pushed`), exactly as the Task Sheet's Send does — surfaced on the row so a task can be handed to Reminders without opening the sheet. Shows `✓ Sent` (muted, non-interactive-looking) once pushed. The button stops event propagation so it never triggers the row tap or a swipe.
 - **Long-press anywhere on the row (~300ms hold)** → picks up the task for drag-reorder. Row gets `scale(1.02)` + shadow. A drop indicator (amber bar) shows where the task will land. Release commits the new `day_order` for all tasks in the sub-group.
 - **Swipe right** (>80px) → "Push to tomorrow" (sets `do_date`=tomorrow, clears `day_order`). 3-second undo toast.
-- **Swipe left** (>80px) → "Triage" (sets `status='triage'`). 3-second undo toast. Note: marking Done lives on the checkbox + the Task Sheet status picker; swipe-left isn't a second path for it.
+- **Swipe left** (>80px) → "Triage" (sets `status='triage'`). 3-second undo toast. Note: marking Done lives on the checkbox + the Task Sheet status picker; swipe-left isn't a second path for it. (This decision stands — an earlier proposal to make swipe-left "Mark done" was considered and rejected to keep one unambiguous done path.)
 - Sub-threshold swipe snaps back. Vertical scroll passes through to the browser. Native click is suppressed for ~350ms after any gesture activates so taps don't double-fire.
 
 The **same swipe gestures (push / triage) also work on Project Detail's task rows** — the gesture layer is shared, not Tasks-mode-only. Swiping a task in a project's task list pushes or triages it identically, so the user never has to leave the project view just to defer a task.
@@ -189,7 +206,7 @@ The **same swipe gestures (push / triage) also work on Project Detail's task row
 
 Bottom-sheet overlay invoked from any task row in either Tasks Mode or Project Detail. Shows:
 
-- **Task title** (display, V1)
+- **Task title** — **inline editable**. Tap the title → input with Save/Cancel (Enter saves, Escape cancels); writes `course_tasks.title` and syncs every cache (Tasks/Today, Project Detail, Monday Open). Required — empty is rejected, the editor stays open. Course-only: **no Notion writeback** for task title. This is a deliberate asymmetry with project *name* (which does write back via `writebackProjectName`): task title writeback is deferred for consistency with task notes/effort being Course-owned, and to avoid widening the Notion write surface without a clear need. Revisit if round-trip task titles become a real ask.
 - **Project** — typeahead input backed by a `<datalist>` of all projects. Type to filter; pick an option to assign; clear to unassign. Typing an unknown name + Enter/blur → confirms and *creates* a new project (`status='idea'`), retroactively links this task to it, then jumps to the new project's detail page. Also shows an "Open [project] →" chip when one is assigned.
 - **Work area** — same typeahead pattern as Project, backed by your imported Areas plus any free-text values already present on projects. No create-new branch; just save the typed value.
 - **Status** — chip + tap-to-open picker with all 6 task statuses (Triage / Next / In Progress / Waiting / Done / Dropped). Save writes to Supabase + writes back to Notion's `Task Status` (with `Complete=true` on Done).
@@ -200,7 +217,7 @@ Bottom-sheet overlay invoked from any task row in either Tasks Mode or Project D
 
 Notion writebacks for project/work_area re-assignment are deferred — relation writebacks need Notion page IDs we don't keep in state. Course is authoritative; Notion drifts on those relations until selective re-import.
 
-Closes via X button, backdrop click, or Esc. V1.1 will add inline editing for title.
+Closes via X button, backdrop click, or Esc. (Title editing landed; only the meta chips — type, person dependency — remain display-only.)
 
 ### 3. Project Detail
 
@@ -513,6 +530,8 @@ Each card is editable:
 - Dismiss → marks the capture `dismissed`, no entity created
 
 **Notes have a destination now.** A `type=note` capture shows the Project dropdown. On Accept, the capture's text is **appended to that project's `course_projects.notes`** (timestamped separator: a blank line + `— <date> —` + the text), so the note lands somewhere durable and reviewable instead of evaporating. This is the answer to "where do the notes go": into the chosen project's Notes block (visible in Project Detail). If no project is selected, Accept is blocked with a hint ("Pick a project for this note, or change the type / Dismiss") — a note with no home is the exact failure we're fixing, so the flow refuses to silently drop it. (V2 may add Still as an alternate destination; V1 keeps it to project notes.)
+
+**Optional finer target — a specific task.** Once a project is chosen for a note, an optional **Task** dropdown appears, scoped to that project's open tasks (lazily fetched for the chosen project; the inbox doesn't preload tasks). Default is "— Whole project —" (append to `course_projects.notes`, the existing behavior). If a task is selected, the note is instead appended to that **`course_tasks.notes`** (same timestamped format, same cache-sync). Changing the project resets the task selection and refetches. The project is still required; the task is the optional precision. This makes the inbox able to file a captured thought against the exact task it's about, not just the project.
 
 Entry points for capture itself are defined in [Adding Things](#adding-things--capture-and-contextual-add).
 

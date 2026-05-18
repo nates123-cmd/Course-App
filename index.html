@@ -1445,6 +1445,28 @@
     transform: translate(-50%, -50%);
   }
   .task-body { flex: 1; min-width: 0; }
+  .task-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    flex-shrink: 0;
+  }
+  .reminder-btn {
+    background: var(--bg-nested);
+    color: var(--accent);
+    border: none;
+    border-radius: var(--r-6);
+    padding: var(--sp-4) var(--sp-8);
+    font-size: var(--fs-10);
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .reminder-btn.sent {
+    color: var(--text-faint);
+    background: transparent;
+  }
   .task-title {
     font-size: var(--fs-14);
     font-weight: 500;
@@ -1542,6 +1564,7 @@
   }
   .day-header.today    { color: var(--accent); }
   .day-header.tomorrow { color: var(--text-muted); }
+  .day-header.weekend  { color: var(--accent-dim); }
   .day-header.no-date  { color: var(--text-faint); }
   .day-header-count {
     color: var(--text-faint);
@@ -3461,7 +3484,7 @@
 
 <div class="mode-toggle">
   <div class="mode-btn active" data-mode="projects">Projects</div>
-  <div class="mode-btn" data-mode="tasks">Tasks</div>
+  <div class="mode-btn" data-mode="tasks">Today</div>
 </div>
 
 <div class="pulse-card" id="pulse-card">
@@ -3860,7 +3883,7 @@
     setup: loadSetupState(),
     detail: { loading: false, projectId: null, project: null, tasks: [], goal: null, nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status' },
     tasksMode: { tasks: null, loading: false, addingForDate: null, sort: 'manual', filters: { pillar: [], area: [], pstatus: [] }, filterOpen: false },
-    taskSheet: { open: false, taskId: null, statusPickerOpen: false, notesEditing: false },
+    taskSheet: { open: false, taskId: null, statusPickerOpen: false, notesEditing: false, titleEditing: false },
     captureInbox: { loading: false, items: [], classifying: false, classifyError: null, pendingCount: 0 },
     search: { query: '', projects: [], tasks: [], loading: false },
     mondayOpen: {
@@ -7280,6 +7303,13 @@ Output strict JSON array (no surrounding prose, no code fences):
           item.project_id = suggestion.project_id;
         }
       });
+      // Pre-load task options for any note the classifier scoped to a project,
+      // so the optional task dropdown is ready without a manual project re-pick.
+      state.captureInbox.items.forEach(it => {
+        if (it.type === 'note' && it.project_id && it._noteTasks === undefined && !it._noteTasksLoading) {
+          fetchNoteTasks(it);
+        }
+      });
     } catch (err) {
       console.warn('Classify captures failed:', err);
       state.captureInbox.classifyError = err.message;
@@ -7339,6 +7369,23 @@ Output strict JSON array (no surrounding prose, no code fences):
           </select>
         </div>
       ` : '';
+      // Optional finer target for a note: a specific task within the chosen project.
+      let noteTaskRow = '';
+      if (item.type === 'note' && item.project_id) {
+        if (item._noteTasksLoading) {
+          noteTaskRow = `<div class="capture-item-row"><span class="meta-label">Task</span><span style="font-size: var(--fs-12); color: var(--text-faint); font-style: italic;">Loading tasks…</span></div>`;
+        } else if (Array.isArray(item._noteTasks)) {
+          noteTaskRow = `
+            <div class="capture-item-row">
+              <span class="meta-label">Task (optional)</span>
+              <select class="capture-type-select" data-capture-note-task="${item.id}" ${isDone ? 'disabled' : ''}>
+                <option value="">— Whole project —</option>
+                ${item._noteTasks.map(t => `<option value="${t.id}" ${item.target_task_id === t.id ? 'selected' : ''}>${escapeHtml(t.title)}</option>`).join('')}
+              </select>
+              ${item._noteTasks.length ? '' : `<span style="font-size: var(--fs-11); color: var(--text-faint);">No open tasks — note goes to the project.</span>`}
+            </div>`;
+        }
+      }
       const areaRow = (item.type === 'task' || item.type === 'project') ? `
         <div class="capture-item-row">
           <span class="meta-label">Area</span>
@@ -7378,6 +7425,7 @@ Output strict JSON array (no surrounding prose, no code fences):
             ${titleInput}
           </div>
           ${projectRow}
+          ${noteTaskRow}
           ${areaRow}
           ${doDateRow}
           ${statusRow}
@@ -7392,6 +7440,24 @@ Output strict JSON array (no surrounding prose, no code fences):
     }).join('');
 
     body.innerHTML = header + classifyStatus + cardsHtml;
+  }
+
+  // Lazily load a project's open tasks for the note→task funnel dropdown.
+  async function fetchNoteTasks(item) {
+    if (!item || !item.project_id) return;
+    item._noteTasksLoading = true;
+    item._noteTasks = undefined;
+    renderCaptureInbox();
+    try {
+      const rows = await sbFetch(`/course_tasks?project_id=eq.${item.project_id}&status=not.in.(done,dropped)&select=id,title&order=created_at.desc`);
+      item._noteTasks = Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      console.warn('Note-task fetch failed:', err);
+      item._noteTasks = [];
+    } finally {
+      item._noteTasksLoading = false;
+      renderCaptureInbox();
+    }
   }
 
   async function acceptCapture(captureId) {
@@ -7434,23 +7500,39 @@ Output strict JSON array (no surrounding prose, no code fences):
         });
         if (inserted && inserted[0]) state.goals.push(inserted[0]);
       } else if (item.type === 'note') {
-        // Append the captured text to the chosen project's notes, timestamped.
-        const proj = state.projects.find(p => p.id === item.project_id);
         const noteText = (item.title || '').trim() || (item.raw_text || '').trim();
         const stamp = `— ${fmtDue(localDateStr())} —`;
-        let existing = '';
-        try {
-          const rows = await sbFetch(`/course_projects?id=eq.${item.project_id}&select=notes`);
-          existing = (rows && rows[0] && rows[0].notes) || '';
-        } catch { existing = (proj && proj.notes) || ''; }
-        const appended = existing ? `${existing}\n\n${stamp}\n${noteText}` : `${stamp}\n${noteText}`;
-        const updated = await sbFetch(`/course_projects?id=eq.${item.project_id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ notes: appended }),
-        });
-        if (proj) proj.notes = (updated && updated[0]) ? updated[0].notes : appended;
-        if (state.detail && state.detail.project && state.detail.project.id === item.project_id) {
-          state.detail.project.notes = proj ? proj.notes : appended;
+        if (item.target_task_id) {
+          // Finer target: append to a specific task's notes.
+          let existing = '';
+          try {
+            const rows = await sbFetch(`/course_tasks?id=eq.${item.target_task_id}&select=notes`);
+            existing = (rows && rows[0] && rows[0].notes) || '';
+          } catch { existing = ''; }
+          const appended = existing ? `${existing}\n\n${stamp}\n${noteText}` : `${stamp}\n${noteText}`;
+          const updated = await sbFetch(`/course_tasks?id=eq.${item.target_task_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ notes: appended }),
+          });
+          const finalNotes = (updated && updated[0]) ? updated[0].notes : appended;
+          collectTaskRefs(item.target_task_id).forEach(r => { r.notes = finalNotes; });
+        } else {
+          // Append the captured text to the chosen project's notes, timestamped.
+          const proj = state.projects.find(p => p.id === item.project_id);
+          let existing = '';
+          try {
+            const rows = await sbFetch(`/course_projects?id=eq.${item.project_id}&select=notes`);
+            existing = (rows && rows[0] && rows[0].notes) || '';
+          } catch { existing = (proj && proj.notes) || ''; }
+          const appended = existing ? `${existing}\n\n${stamp}\n${noteText}` : `${stamp}\n${noteText}`;
+          const updated = await sbFetch(`/course_projects?id=eq.${item.project_id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ notes: appended }),
+          });
+          if (proj) proj.notes = (updated && updated[0]) ? updated[0].notes : appended;
+          if (state.detail && state.detail.project && state.detail.project.id === item.project_id) {
+            state.detail.project.notes = proj ? proj.notes : appended;
+          }
         }
       }
       await sbFetch(`/course_captures?id=eq.${captureId}`, {
@@ -7768,14 +7850,30 @@ Output strict JSON array (no surrounding prose, no code fences):
     const today = localDateStr();
     const tomorrow = localDateStr(new Date(Date.now() + 86400000));
 
-    const todayTasks = [], tomorrowTasks = [], noDateTasks = [];
+    // Upcoming weekend (Sat + Sun). Mon–Fri → this coming weekend; on a
+    // weekend day, that day's own Sat/Sun.
+    const _now = new Date();
+    const _dow = _now.getDay(); // 0 Sun .. 6 Sat
+    const _satOffset = _dow === 0 ? 6 : (6 - _dow);
+    const _sat = new Date(_now); _sat.setDate(_sat.getDate() + _satOffset);
+    const _sun = new Date(_sat); _sun.setDate(_sun.getDate() + 1);
+    const satStr = localDateStr(_sat);
+    const sunStr = localDateStr(_sun);
+    const weekendSet = new Set([satStr, sunStr]);
+    const isWeekday = _dow >= 1 && _dow <= 5;
+    // Quick-add target: Saturday if it's still beyond Tomorrow, else Sunday,
+    // so the added task stays in the Weekend tile.
+    const weekendAddDate = satStr > tomorrow ? satStr : sunStr;
+
+    const todayTasks = [], tomorrowTasks = [], weekendTasks = [], noDateTasks = [];
     tasks.forEach(t => {
       if (!t.do_date) noDateTasks.push(t);
       else if (t.do_date <= today) todayTasks.push(t);
       else if (t.do_date === tomorrow) tomorrowTasks.push(t);
+      else if (weekendSet.has(t.do_date)) weekendTasks.push(t);
     });
     // Apply the chosen sort within each day bucket (sub-grouping preserves order)
-    [todayTasks, tomorrowTasks, noDateTasks].forEach(arr => arr.sort(cmp));
+    [todayTasks, tomorrowTasks, weekendTasks, noDateTasks].forEach(arr => arr.sort(cmp));
 
     const projectsById = {};
     state.projects.forEach(p => { projectsById[p.id] = p; });
@@ -7808,6 +7906,11 @@ Output strict JSON array (no surrounding prose, no code fences):
       ].filter(Boolean).join('');
       // Drag-reorder only under Manual sort (any other sort would fight the order)
       const dragCls = state.tasksMode.sort === 'manual' ? ' draggable' : '';
+      // Per-row reminder button (mockup parity) — hidden on done rows
+      const sent = !!t.reminders_uuid;
+      const reminderHtml = isDone
+        ? ''
+        : `<div class="task-actions"><button class="reminder-btn ${sent ? 'sent' : ''}" data-send-reminder="${t.id}">${sent ? '✓ Sent' : 'Send'}</button></div>`;
       return `
         <div class="task-swipe-wrap" data-task-id="${t.id}">
           <div class="task-swipe-action push">→ Push</div>
@@ -7818,6 +7921,7 @@ Output strict JSON array (no surrounding prose, no code fences):
               <div class="task-title ${isDone ? 'done' : ''}">${escapeHtml(t.title)}</div>
               ${meta ? `<div class="task-meta">${meta}</div>` : ''}
             </div>
+            ${reminderHtml}
           </div>
         </div>
       `;
@@ -7847,7 +7951,7 @@ Output strict JSON array (no surrounding prose, no code fences):
 
       // Day overload advisory — only for the actionable horizon (Today/Tomorrow)
       let overloadHtml = '';
-      if (dateKey && dayClass !== 'no-date') {
+      if (dayClass === 'today' || dayClass === 'tomorrow') {
         const OVER_MINS = 360, OVER_TASKS = 8, OVER_PROJECTS = 4;
         const mins = budget ? budget.mins : 0;
         const taskCount = sectionTasks.length;
@@ -7872,9 +7976,13 @@ Output strict JSON array (no surrounding prose, no code fences):
           overloadHtml = `<div class="day-overload">${escapeHtml(label)} is heavy: ${escapeHtml(facts)}. ${escapeHtml(rec)}</div>`;
         }
       }
-      const dayLabel = dateKey ? fmtDayLabel(label, dateKey) : label;
-      // Today/Tomorrow always render so their quick-add is always available
-      const alwaysShow = dayClass === 'today' || dayClass === 'tomorrow';
+      // Weekend label is the Sat–Sun span, passed in pre-formatted
+      const dayLabel = dayClass === 'weekend'
+        ? label
+        : (dateKey ? fmtDayLabel(label, dateKey) : label);
+      // Today/Tomorrow (and Weekend on weekdays) always render so their
+      // quick-add is always available
+      const alwaysShow = dayClass === 'today' || dayClass === 'tomorrow' || dayClass === 'weekend';
       const unscopedHtml = unscoped.length
         ? `<div class="tasks-subgroup-unscoped" data-subgroup="unscoped:${dateKey || 'no-date'}">${unscoped.map(renderTaskRow).join('')}</div>`
         : '';
@@ -7915,9 +8023,10 @@ Output strict JSON array (no surrounding prose, no code fences):
         <section class="tasks-day-section" data-day="${dateKey || 'no-date'}">
           <div class="day-header ${dayClass}">
             <div class="day-header-main"><span>${escapeHtml(dayLabel)}</span><span class="day-header-count">· ${sectionTasks.length}</span>${budgetHtml}</div>
+            <button class="day-header-add" data-focus-add="${dateKey || ''}" aria-label="Add a task to ${escapeHtml(dayClass === 'weekend' ? 'Weekend' : label)}">+</button>
           </div>
           <div class="day-add-input-wrap open">
-            <input type="text" class="day-add-input" placeholder="+ Add to ${escapeHtml(label)}…" data-add-input-for="${dateKey || ''}" />
+            <input type="text" class="day-add-input" placeholder="+ Add to ${escapeHtml(dayClass === 'weekend' ? 'Weekend' : label)}…" data-add-input-for="${dateKey || ''}" />
           </div>
           ${overloadHtml}
           ${bodyContent}
@@ -7926,8 +8035,11 @@ Output strict JSON array (no surrounding prose, no code fences):
       `;
     }
 
+    const weekendLabel = `Weekend · ${fmtShortDate(_sat)}–${fmtShortDate(_sun)}`;
+    const showWeekend = isWeekday || weekendTasks.length;
     const html = renderDaySection('Today', todayTasks, 'today', today)
                + renderDaySection('Tomorrow', tomorrowTasks, 'tomorrow', tomorrow)
+               + (showWeekend ? renderDaySection(weekendLabel, weekendTasks, 'weekend', weekendAddDate) : '')
                + (noDateTasks.length ? renderDaySection('No date', noDateTasks, 'no-date', null) : '');
 
     const toolbar = tasksToolbarHtml(allTasks);
@@ -10173,13 +10285,66 @@ Output strict JSON array (no surrounding prose, no code fences):
   }
 
   function openTaskSheet(taskId) {
-    state.taskSheet = { open: true, taskId, statusPickerOpen: false, notesEditing: false };
+    state.taskSheet = { open: true, taskId, statusPickerOpen: false, notesEditing: false, titleEditing: false };
     renderTaskSheet();
   }
   function closeTaskSheet() {
-    state.taskSheet = { open: false, taskId: null, statusPickerOpen: false, notesEditing: false };
+    state.taskSheet = { open: false, taskId: null, statusPickerOpen: false, notesEditing: false, titleEditing: false };
     document.getElementById('task-sheet').classList.remove('open');
     document.getElementById('task-sheet-backdrop').classList.remove('open');
+  }
+
+  // Collect every cached copy of a task so a Task Sheet edit stays in sync
+  // across Today, Project Detail, and Monday Open.
+  function collectTaskRefs(taskId) {
+    const refs = [];
+    if (state.detail?.tasks) {
+      const t = state.detail.tasks.find(x => x.id === taskId);
+      if (t) refs.push(t);
+    }
+    if (state.tasksMode?.tasks) {
+      const t = state.tasksMode.tasks.find(x => x.id === taskId);
+      if (t) refs.push(t);
+    }
+    if (state.mondayOpen) {
+      if (state.mondayOpen.tasksByProject) {
+        for (const pid in state.mondayOpen.tasksByProject) {
+          const t = (state.mondayOpen.tasksByProject[pid] || []).find(x => x.id === taskId);
+          if (t) refs.push(t);
+        }
+      }
+      if (Array.isArray(state.mondayOpen.unscopedTasks)) {
+        const t = state.mondayOpen.unscopedTasks.find(x => x.id === taskId);
+        if (t) refs.push(t);
+      }
+    }
+    return refs;
+  }
+
+  async function saveTaskTitleFromSheet() {
+    const taskId = state.taskSheet.taskId;
+    if (!taskId) return;
+    const input = document.getElementById('task-sheet-title-input');
+    if (!input) return;
+    const newTitle = input.value.trim();
+    if (!newTitle) { alert('Task title can\'t be empty.'); input.focus(); return; }
+    const refs = collectTaskRefs(taskId);
+    try {
+      const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (updated && updated[0]) refs.forEach(r => Object.assign(r, updated[0]));
+      else refs.forEach(r => { r.title = newTitle; });
+      state.taskSheet.titleEditing = false;
+      renderTaskSheet();
+      // Reflect the rename on whatever surface is behind the sheet
+      if (state.view === 'project-detail') renderPdTasks();
+      if (state.view === 'dashboard' && state.mode === 'tasks') renderTasksMode();
+    } catch (err) {
+      console.warn('Save task title failed:', err);
+      alert('Failed to save title: ' + err.message);
+    }
   }
 
   async function saveTaskNotesFromSheet() {
@@ -10257,7 +10422,13 @@ Output strict JSON array (no surrounding prose, no code fences):
     document.getElementById('task-sheet-body').innerHTML = `
       <div class="task-sheet-section">
         <div class="meta-label">Task</div>
-        <div class="task-sheet-title">${escapeHtml(task.title)}</div>
+        ${state.taskSheet.titleEditing
+          ? `<input class="task-sheet-input" id="task-sheet-title-input" value="${escapeHtml(task.title)}" />
+             <div style="display: flex; gap: var(--sp-6); margin-top: var(--sp-8);">
+               <button class="nav-btn primary" id="task-sheet-save-title">Save</button>
+               <button class="nav-btn" id="task-sheet-cancel-title">Cancel</button>
+             </div>`
+          : `<div class="task-sheet-title" id="task-sheet-edit-title" style="cursor: pointer;">${escapeHtml(task.title)} <span class="task-sheet-edit-icon">✎</span></div>`}
       </div>
       <div class="task-sheet-section">
         <div class="meta-label">Project</div>
@@ -11761,16 +11932,30 @@ Content-Type: application/json
   });
   document.getElementById('capture-inbox-view').addEventListener('change', (e) => {
     const id = e.target.dataset.captureType || e.target.dataset.captureProject
-      || e.target.dataset.captureArea || e.target.dataset.captureDoDate;
+      || e.target.dataset.captureArea || e.target.dataset.captureDoDate
+      || e.target.dataset.captureNoteTask;
     if (!id) return;
     const item = state.captureInbox.items.find(x => x.id === id);
     if (!item) return;
-    if (e.target.dataset.captureType) item.type = e.target.value;
-    if (e.target.dataset.captureProject) item.project_id = e.target.value || null;
+    if (e.target.dataset.captureType) {
+      item.type = e.target.value;
+      // Leaving 'note' clears the finer task target + its cache
+      if (item.type !== 'note') { item.target_task_id = null; item._noteTasks = undefined; }
+    }
+    if (e.target.dataset.captureProject) {
+      item.project_id = e.target.value || null;
+      // A note's task target is project-scoped — reset + (re)load for the new project
+      if (item.type === 'note') {
+        item.target_task_id = null;
+        item._noteTasks = undefined;
+        if (item.project_id) { fetchNoteTasks(item); return; } // fetch re-renders
+      }
+    }
+    if (e.target.dataset.captureNoteTask) item.target_task_id = e.target.value || null;
     if (e.target.dataset.captureArea) item.work_area = e.target.value || null;
     if (e.target.dataset.captureDoDate) item.do_date = e.target.value || null;
-    // Re-render so project / area / date / status rows appear/disappear when type toggles
-    if (e.target.dataset.captureType) renderCaptureInbox();
+    // Re-render so project / task / area / date / status rows appear/disappear
+    if (e.target.dataset.captureType || e.target.dataset.captureProject) renderCaptureInbox();
   });
   document.getElementById('capture-inbox-view').addEventListener('input', (e) => {
     if (e.target.dataset.captureTitle) {
@@ -11838,6 +12023,14 @@ Content-Type: application/json
   // — Dashboard: clicks on project rows (Projects mode) and tasks (Tasks mode) —
   document.getElementById('projects-list').addEventListener('click', (e) => {
     if (_suppressNextClick) return;
+    // Today: day-header + focuses that section's always-visible inline add
+    const focusAdd = e.target.closest('[data-focus-add]');
+    if (focusAdd) {
+      const sel = `[data-add-input-for="${focusAdd.dataset.focusAdd}"]`;
+      const inp = document.querySelector(sel);
+      if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+      return;
+    }
     // Tasks mode: sort & filter toolbar
     if (e.target.closest('[data-tasks-filter-toggle]')) {
       state.tasksMode.filterOpen = !state.tasksMode.filterOpen;
@@ -11859,6 +12052,13 @@ Content-Type: application/json
       if (i === -1) arr.push(val); else arr.splice(i, 1);
       saveTasksPrefs();
       renderTasksMode();
+      return;
+    }
+    // Today mode: per-row reminder Send button
+    const sendBtn = e.target.closest('[data-send-reminder]');
+    if (sendBtn) {
+      e.stopPropagation();
+      sendTaskToReminders(sendBtn.dataset.sendReminder);
       return;
     }
     // Tasks mode: cycle work type
@@ -12015,6 +12215,24 @@ Content-Type: application/json
       saveTaskEffortFromSheet(effortChip.dataset.setEffort);
       return;
     }
+    if (e.target.closest('#task-sheet-edit-title')) {
+      state.taskSheet.titleEditing = true;
+      renderTaskSheet();
+      setTimeout(() => {
+        const ip = document.getElementById('task-sheet-title-input');
+        if (ip) { ip.focus(); ip.setSelectionRange(ip.value.length, ip.value.length); }
+      }, 0);
+      return;
+    }
+    if (e.target.closest('#task-sheet-cancel-title')) {
+      state.taskSheet.titleEditing = false;
+      renderTaskSheet();
+      return;
+    }
+    if (e.target.closest('#task-sheet-save-title')) {
+      saveTaskTitleFromSheet();
+      return;
+    }
     if (e.target.closest('#task-sheet-edit-notes')) {
       state.taskSheet.notesEditing = true;
       renderTaskSheet();
@@ -12050,6 +12268,11 @@ Content-Type: application/json
   });
   // Enter on the project input commits + can create-new
   document.getElementById('task-sheet').addEventListener('keydown', (e) => {
+    if (e.target.id === 'task-sheet-title-input') {
+      if (e.key === 'Enter') { e.preventDefault(); saveTaskTitleFromSheet(); }
+      else if (e.key === 'Escape') { e.preventDefault(); state.taskSheet.titleEditing = false; renderTaskSheet(); }
+      return;
+    }
     if (e.target.id === 'task-sheet-project-input' && e.key === 'Enter') {
       e.preventDefault();
       e.target.blur(); // triggers change above
