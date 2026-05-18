@@ -1769,7 +1769,7 @@
     background: var(--accent);
     justify-content: flex-start;
   }
-  .task-swipe-action.triage {
+  .task-swipe-action.state {
     right: 0;
     background: var(--risk);
     justify-content: flex-end;
@@ -2459,6 +2459,63 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease;
+  }
+  /* Shared row-menu — body-level, anchored to the swiped row.
+     Swipe-right = push dates; swipe-left = task state. */
+  .row-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 110;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+  }
+  .row-menu-backdrop.open { opacity: 1; pointer-events: auto; }
+  .row-menu {
+    position: fixed;
+    z-index: 111;
+    background: var(--bg-elevated);
+    border: var(--sp-1) solid var(--border);
+    border-radius: var(--r-10);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    padding: var(--sp-6);
+    width: 220px;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+  .row-menu .row-menu-opt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-8);
+    background: var(--bg-nested);
+    border: var(--sp-1) solid var(--border);
+    color: var(--text);
+    border-radius: var(--r-6);
+    padding: var(--sp-8) var(--sp-10);
+    font-size: var(--fs-13);
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+  }
+  .row-menu .row-menu-opt:hover { border-color: var(--accent-dim); }
+  .row-menu .row-menu-sub {
+    font-size: var(--fs-11);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .row-menu .row-menu-pick { position: relative; }
+  .row-menu .row-menu-pick input[type="date"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border: 0;
+    padding: 0;
   }
   .fab-backdrop.open { opacity: 1; pointer-events: auto; }
 
@@ -3599,6 +3656,8 @@
   <div id="task-sheet-body"></div>
 </div>
 
+<div class="row-menu-backdrop" id="row-menu-backdrop"></div>
+
 <div class="fab-backdrop" id="fab-backdrop"></div>
 <div class="fab-menu" id="fab-menu">
   <button class="fab-menu-item" data-fab-type="project">+ Project</button>
@@ -3691,6 +3750,11 @@
     triage: 'Triage', next: 'Next', in_progress: 'In Progress',
     waiting: 'Waiting', done: 'Done', dropped: 'Dropped', pushed: 'Pushed',
   };
+  // UI display labels. Identical to the Notion map EXCEPT `triage` shows as
+  // "Someday" — the dead triage status was repurposed as the parked/someday
+  // bucket. The DB value + Notion select name stay `triage`/`Triage` (no
+  // migration, writeback unbroken); only Course-native surfaces relabel.
+  const TASK_STATUS_LABEL = { ...TASK_STATUS_TO_NOTION, triage: 'Someday' };
   async function writebackProjectStatus(notionUrl, status) {
     const pageId = extractNotionPageId(notionUrl);
     const notionStatus = PROJECT_STATUS_TO_NOTION[status];
@@ -3942,6 +4006,7 @@
       error: null,
     },
     fab: { menuOpen: false },
+    rowMenu: { open: false, kind: null, taskId: null, anchorRect: null, opts: null },
     createSheet: { open: false, type: null, saving: false, draft: {} },
     pulse: {
       loading: false,
@@ -4904,7 +4969,7 @@ Output strict JSON only, no surrounding prose, no code fences:
       push_tasks_to_tomorrow: 'Push to tomorrow',
       mark_tasks_done: 'Mark done',
       pause_projects: 'Pause',
-      triage_tasks: 'Move to Triage',
+      triage_tasks: 'Move to Someday',
     };
     const verb = verbMap[action.type] || 'Apply';
     return `<strong>${escapeHtml(verb)}</strong> · ${count} ${noun}`;
@@ -7914,7 +7979,7 @@ Output strict JSON array (no surrounding prose, no code fences):
       return `
         <div class="task-swipe-wrap" data-task-id="${t.id}">
           <div class="task-swipe-action push">→ Push</div>
-          <div class="task-swipe-action triage">Triage ⚑</div>
+          <div class="task-swipe-action state">State ⚑</div>
           <div class="task${dragCls}" data-task-id="${t.id}">
             <div class="task-check ${isDone ? 'done' : ''}" data-task-check="${t.id}"></div>
             <div class="task-body" data-task-body="${t.id}">
@@ -8139,24 +8204,26 @@ Output strict JSON array (no surrounding prose, no code fences):
     if (state.view === 'dashboard' && state.mode === 'tasks') { renderStats(); renderTasksMode(); }
   }
 
-  async function pushTaskToTomorrow(taskId) {
+  // Push a task to an explicit date. Generalized from the old
+  // pushTaskToTomorrow — the swipe-right menu calls this with the chosen date.
+  async function pushTaskToDate(taskId, isoDate, label) {
+    closeRowMenu(); // a commit/re-render must never leave a stale anchored menu
     const refs = taskRefs(taskId);
     if (!refs.length) return;
     const t = refs[0];
     const prevDate = t.do_date;
     const prevOrder = t.day_order;
     const prevCount = t.reschedule_count || 0;
-    const tomorrow = localDateStr(new Date(Date.now() + 86400000));
     try {
       const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ do_date: tomorrow, day_order: null }),
+        body: JSON.stringify({ do_date: isoDate, day_order: null }),
       });
-      const patch = (updated && updated[0]) ? updated[0] : { do_date: tomorrow, day_order: null };
+      const patch = (updated && updated[0]) ? updated[0] : { do_date: isoDate, day_order: null };
       refs.forEach(r => Object.assign(r, patch));
-      writebackTaskDoDate(t.notion_url, tomorrow);
+      writebackTaskDoDate(t.notion_url, isoDate);
       rerenderTaskSurfaces();
-      showToast(`Pushed: ${t.title}`, {
+      showToast(`${label}: ${t.title}`, {
         durationMs: 3000,
         undo: async () => {
           // Send reschedule_count explicitly so the trigger doesn't re-increment.
@@ -8175,42 +8242,188 @@ Output strict JSON array (no surrounding prose, no code fences):
       rerenderTaskSurfaces();
     }
   }
+  // Thin back-compat wrapper (currently only finishSwipe-era callers / future automation).
+  function pushTaskToTomorrow(taskId) {
+    return pushTaskToDate(taskId, localDateStr(new Date(Date.now() + 86400000)), 'Pushed');
+  }
 
-  async function triageTaskFromSwipe(taskId) {
+  // V2 INSERTION POINT: AI smart-day recommendation row. Return
+  // { key, label, date } (e.g. { label:'Wed (light day)', date:'YYYY-MM-DD' })
+  // to add one extra option; null = render nothing (V1 behavior).
+  function smartPushSuggestion(taskId) { return null; }
+
+  // — Option providers for the shared row-menu —
+  // Each option: { key, label, sub, run }. The menu's click handler resolves
+  // `run` by data-opt-key from state.rowMenu.opts (kind-agnostic).
+
+  // Swipe-RIGHT: push date choices. Data-driven so V2's AI row is one
+  // additive array entry, not a refactor.
+  function pushDateOptions(taskId) {
+    const tomorrow = localDateStr(new Date(Date.now() + 86400000));
+    // Next week = next Monday (start of next week)
+    const nextMonday = localDateStr(new Date(parseLocalDate(getMondayOfWeek()).getTime() + 7 * 86400000));
+    // Next month = first Monday of next month
+    const now = new Date();
+    const nm = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const firstMonNextMonth = localDateStr(firstMondayOfMonth(nm.getFullYear(), nm.getMonth()));
+    const mk = (key, label, date) => ({ key, label, sub: fmtDue(date), run: () => pushTaskToDate(taskId, date, label) });
+    const opts = [
+      mk('tomorrow', 'Tomorrow', tomorrow),
+      mk('next-week', 'Next week', nextMonday),
+      mk('next-month', 'Next month', firstMonNextMonth),
+    ];
+    const smart = smartPushSuggestion(taskId);
+    if (smart && smart.date) opts.push(mk('smart', smart.label, smart.date));
+    return opts;
+  }
+
+  // Swipe-LEFT: task state choices.
+  function stateMenuOptions(taskId) {
+    return [
+      { key: 'drop', label: 'Drop', sub: 'not happening', run: () => setTaskStatusFromMenu(taskId, 'dropped', 'Dropped') },
+      { key: 'waiting', label: 'Waiting', sub: 'blocked', run: () => setTaskStatusFromMenu(taskId, 'waiting', 'Waiting') },
+      // Someday reuses the (otherwise dead) 'triage' status, relabeled.
+      { key: 'someday', label: 'Someday', sub: 'park it', run: () => setTaskStatusFromMenu(taskId, 'triage', 'Someday') },
+    ];
+  }
+
+  // Generalized status set from the state menu. Modeled on the old
+  // triageTaskFromSwipe + the undo discipline from pushTaskToDate.
+  async function setTaskStatusFromMenu(taskId, status, label) {
+    closeRowMenu(); // a commit/re-render must never leave a stale anchored menu
     const refs = taskRefs(taskId);
     if (!refs.length) return;
     const t = refs[0];
-    if (t.status === 'triage') {
-      rerenderTaskSurfaces();
-      return;
-    }
+    const isSomeday = status === 'triage';
     const prevStatus = t.status;
+    const prevDate = t.do_date;
+    const prevOrder = t.day_order;
+    const body = isSomeday
+      ? { status, do_date: null, day_order: null }
+      : { status };
     try {
       const updated = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'triage' }),
+        body: JSON.stringify(body),
       });
-      const patch = (updated && updated[0]) ? updated[0] : { status: 'triage' };
+      const patch = (updated && updated[0]) ? updated[0] : body;
       refs.forEach(r => Object.assign(r, patch));
-      writebackTaskStatus(t.notion_url, 'triage');
+      writebackTaskStatus(t.notion_url, status);
       rerenderTaskSurfaces();
-      showToast(`Triaged: ${t.title}`, {
+      showToast(`${label}: ${t.title}`, {
         durationMs: 3000,
         undo: async () => {
+          // Someday cleared the date/order — restore them too. Pass
+          // reschedule_count explicitly so the forward-move trigger can't
+          // re-count when the prior date is put back.
+          const ubody = isSomeday
+            ? { status: prevStatus, do_date: prevDate, day_order: prevOrder, reschedule_count: t.reschedule_count || 0 }
+            : { status: prevStatus };
           const undone = await sbFetch(`/course_tasks?id=eq.${taskId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ status: prevStatus }),
+            body: JSON.stringify(ubody),
           });
-          const upatch = (undone && undone[0]) ? undone[0] : { status: prevStatus };
+          const upatch = (undone && undone[0]) ? undone[0] : ubody;
           refs.forEach(r => Object.assign(r, upatch));
           writebackTaskStatus(t.notion_url, prevStatus);
           rerenderTaskSurfaces();
         },
       });
     } catch (err) {
-      console.warn('Triage from swipe failed:', err);
+      console.warn('Set task status from menu failed:', err);
       rerenderTaskSurfaces();
     }
+  }
+
+  // — Shared row-menu overlay (swipe-right=push dates, swipe-left=state) —
+  // One body-level overlay, keyed by `kind`. Reused across Today + Project
+  // Detail; only needs a taskId.
+  function ensureRowMenuEl() {
+    let el = document.getElementById('row-menu');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'row-menu';
+      el.className = 'row-menu';
+      el.style.display = 'none';
+      document.body.appendChild(el);
+      // Listeners live HERE, on a body-level element OUTSIDE #projects-list /
+      // #project-detail-view, so the _suppressNextClick guards at those two
+      // delegated click handlers never run for option taps. Do not move this
+      // listener onto a list container — it would reintroduce that conflict.
+      el.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-opt-key]');
+        if (btn) {
+          e.stopPropagation();
+          const opts = (state.rowMenu && state.rowMenu.opts) || [];
+          const opt = opts.find(o => o.key === btn.dataset.optKey);
+          closeRowMenu();
+          if (opt && typeof opt.run === 'function') opt.run();
+        }
+      });
+      el.addEventListener('change', (e) => {
+        // Native "Pick a date" input — push kind only.
+        if (e.target && e.target.id === 'row-menu-date') {
+          const v = e.target.value;
+          const tid = state.rowMenu.taskId;
+          closeRowMenu();
+          if (tid && v) pushTaskToDate(tid, v, `Pushed to ${fmtDue(v)}`);
+        }
+      });
+    }
+    return el;
+  }
+  function renderRowMenu() {
+    const el = ensureRowMenuEl();
+    const kind = state.rowMenu.kind;
+    const opts = kind === 'state'
+      ? stateMenuOptions(state.rowMenu.taskId)
+      : pushDateOptions(state.rowMenu.taskId);
+    state.rowMenu.opts = opts;
+    const pickRow = kind === 'push'
+      ? `<label class="row-menu-opt row-menu-pick"><span>Pick a date…</span><input type="date" id="row-menu-date" /></label>`
+      : '';
+    el.innerHTML = `
+      ${opts.map(o => `<button class="row-menu-opt" data-opt-key="${escapeHtml(o.key)}"><span>${escapeHtml(o.label)}</span><span class="row-menu-sub">${escapeHtml(o.sub || '')}</span></button>`).join('')}
+      ${pickRow}
+    `;
+    el.style.display = '';
+    // Position: fixed, anchored under the (untransformed) swipe-wrap rect,
+    // clamped to the reading-width column; flip above if it would overflow.
+    const r = state.rowMenu.anchorRect;
+    const mw = 280;
+    const vh = window.innerHeight;
+    el.style.visibility = 'hidden';
+    requestAnimationFrame(() => {
+      const h = el.offsetHeight || 200;
+      let top = (r ? r.bottom : 80) + 6;
+      if (top + h > vh - 8) top = Math.max(8, (r ? r.top : vh) - h - 6);
+      let left = r ? r.left : 16;
+      const maxLeft = window.innerWidth - mw - 8;
+      if (left > maxLeft) left = Math.max(8, maxLeft);
+      el.style.top = `${top}px`;
+      el.style.left = `${left}px`;
+      el.style.visibility = '';
+    });
+    document.getElementById('row-menu-backdrop').classList.add('open');
+  }
+  function openRowMenu(taskId, rowEl, kind = 'push') {
+    // Anchor off the swipe-wrap (untransformed) — NOT the mid-swipe row rect.
+    const wrap = rowEl && rowEl.parentElement ? rowEl.parentElement : rowEl;
+    state.rowMenu = {
+      open: true,
+      kind,
+      taskId,
+      anchorRect: wrap ? wrap.getBoundingClientRect() : null,
+      opts: null,
+    };
+    renderRowMenu();
+  }
+  function closeRowMenu() {
+    state.rowMenu = { open: false, kind: null, taskId: null, anchorRect: null, opts: null };
+    const el = document.getElementById('row-menu');
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+    const bd = document.getElementById('row-menu-backdrop');
+    if (bd) bd.classList.remove('open');
   }
 
   // — Persist reorder within a subgroup —
@@ -8450,20 +8663,23 @@ Output strict JSON array (no surrounding prose, no code fences):
   }
 
   function finishSwipe(row, dx) {
-    const wrap = row.parentElement;
     row.classList.remove('swiping');
     const taskId = row.dataset.taskId;
     const SWIPE_THRESHOLD = 80;
     if (dx > SWIPE_THRESHOLD) {
-      // Swipe right → push
+      // Swipe right → snap back to neutral and open the push date menu.
+      // (Menu is body-anchored, so it's independent of this 200ms animation.)
       row.classList.add('snap-back');
-      row.style.transform = `translateX(${wrap.clientWidth}px)`;
-      setTimeout(() => pushTaskToTomorrow(taskId), 200);
+      row.style.transform = '';
+      setTimeout(() => row.classList.remove('snap-back'), 200);
+      openRowMenu(taskId, row, 'push');
     } else if (dx < -SWIPE_THRESHOLD) {
-      // Swipe left → triage
+      // Swipe left → snap back to neutral and open the state menu
+      // (Drop / Waiting / Someday). Mirrors swipe-right.
       row.classList.add('snap-back');
-      row.style.transform = `translateX(-${wrap.clientWidth}px)`;
-      setTimeout(() => triageTaskFromSwipe(taskId), 200);
+      row.style.transform = '';
+      setTimeout(() => row.classList.remove('snap-back'), 200);
+      openRowMenu(taskId, row, 'state');
     } else {
       // Snap back
       row.classList.add('snap-back');
@@ -9851,7 +10067,7 @@ Output strict JSON array (no surrounding prose, no code fences):
       return `
         <div class="task-swipe-wrap" data-task-id="${t.id}">
           <div class="task-swipe-action push">→ Push</div>
-          <div class="task-swipe-action triage">Triage ⚑</div>
+          <div class="task-swipe-action state">State ⚑</div>
           <div class="task" data-task-id="${t.id}">
             <div class="task-check ${isDone ? 'done' : ''}" data-task-check="${t.id}"></div>
             <div class="task-body" data-task-body="${t.id}">
@@ -9865,7 +10081,7 @@ Output strict JSON array (no surrounding prose, no code fences):
 
     if (d.taskView === 'status') {
       const groups = {
-        'In Progress': [], 'Next': [], 'Waiting': [], 'Triage': [],
+        'In Progress': [], 'Next': [], 'Waiting': [], 'Someday': [],
       };
       const doneOrDropped = [];
       tasks.forEach(t => {
@@ -9873,7 +10089,7 @@ Output strict JSON array (no surrounding prose, no code fences):
         else if (t.status === 'in_progress') groups['In Progress'].push(t);
         else if (t.status === 'next') groups.Next.push(t);
         else if (t.status === 'waiting') groups.Waiting.push(t);
-        else if (t.status === 'triage') groups.Triage.push(t);
+        else if (t.status === 'triage') groups.Someday.push(t); // triage value, "Someday" label
       });
       const groupHtml = Object.entries(groups).map(([name, items]) => {
         if (!items.length) return '';
@@ -10407,7 +10623,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     const task = findTaskById(state.taskSheet.taskId);
     if (!task) { closeTaskSheet(); return; }
     const project = task.project_id ? state.projects.find(p => p.id === task.project_id) : null;
-    const statusLabel = TASK_STATUS_TO_NOTION[task.status] || task.status;
+    const statusLabel = TASK_STATUS_LABEL[task.status] || task.status;
     const metaParts = [
       task.type ? `<span class="task-sheet-meta-chip">${escapeHtml(task.type)}</span>` : '',
       task.person_dependency ? `<span class="task-sheet-meta-chip">w/ ${escapeHtml(task.person_dependency)}</span>` : '',
@@ -10468,7 +10684,7 @@ Output strict JSON array (no surrounding prose, no code fences):
         ${state.taskSheet.statusPickerOpen ? `
           <div class="status-picker" style="margin-top: var(--sp-8);">
             ${TASK_STATUS_OPTIONS.map(s => `
-              <button class="status-option ${s === task.status ? 'current' : ''}" data-pick-task-status="${s}">${escapeHtml(TASK_STATUS_TO_NOTION[s] || s)}</button>
+              <button class="status-option ${s === task.status ? 'current' : ''}" data-pick-task-status="${s}">${escapeHtml(TASK_STATUS_LABEL[s] || s)}</button>
             `).join('')}
           </div>
         ` : ''}
@@ -12184,7 +12400,20 @@ Content-Type: application/json
   document.getElementById('task-sheet-backdrop').addEventListener('click', closeTaskSheet);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.taskSheet.open) closeTaskSheet();
+    if (e.key === 'Escape' && state.rowMenu && state.rowMenu.open) closeRowMenu();
   });
+  document.getElementById('row-menu-backdrop').addEventListener('click', () => {
+    // Ignore the synthetic trailing click from the very swipe that opened the
+    // menu (fires ~300ms after touchend, within the 350ms suppression window);
+    // otherwise the menu would close itself the instant it opens.
+    if (_suppressNextClick) return;
+    closeRowMenu();
+  });
+  // Anchored rect goes stale on scroll — just close (not worth scroll-tracking
+  // a small menu). Capture phase so it catches scrolls on any container.
+  document.addEventListener('scroll', () => {
+    if (state.rowMenu && state.rowMenu.open) closeRowMenu();
+  }, { passive: true, capture: true });
   document.getElementById('task-sheet').addEventListener('click', (e) => {
     if (e.target.closest('#task-sheet-status-btn')) {
       state.taskSheet.statusPickerOpen = !state.taskSheet.statusPickerOpen;
