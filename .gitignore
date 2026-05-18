@@ -1,3 +1,6 @@
 dev-config.js
 .DS_Store
 supabase/.temp/
+
+# Local scratch — duplicates of the canonical root mockups + a stale spec copy
+Course app mockups/
