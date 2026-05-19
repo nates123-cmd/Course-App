@@ -1565,6 +1565,7 @@
   .day-header.today    { color: var(--accent); }
   .day-header.tomorrow { color: var(--text-muted); }
   .day-header.weekend  { color: var(--accent-dim); }
+  .day-header.later    { color: var(--text-muted); }
   .day-header.no-date  { color: var(--text-faint); }
   .day-header-count {
     color: var(--text-faint);
@@ -1573,6 +1574,37 @@
     letter-spacing: 0;
     text-transform: none;
   }
+  /* Scheduled / No-date segment — sits above the sort+filter toolbar.
+     Reuses the mode-toggle visual language at a tighter scale. */
+  .tasks-segment {
+    display: flex;
+    background: var(--bg-elevated);
+    border-radius: var(--r-10);
+    padding: var(--sp-3);
+    margin: var(--sp-4) 0 var(--sp-8);
+  }
+  .tasks-seg-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-6);
+    padding: var(--sp-6) 0;
+    text-align: center;
+    font-size: var(--fs-12);
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--r-8);
+    transition: all 0.15s ease;
+  }
+  .tasks-seg-btn.active { background: var(--bg-nested); color: var(--text); }
+  .tasks-seg-count {
+    font-size: var(--fs-11);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tasks-seg-btn.active .tasks-seg-count { color: var(--accent); }
   .tasks-toolbar {
     display: flex;
     align-items: center;
@@ -3946,7 +3978,7 @@
     pillarColors: loadPillarColors(),
     setup: loadSetupState(),
     detail: { loading: false, projectId: null, project: null, tasks: [], goal: null, nextMoves: null, nextMovesLoading: false, showDone: false, taskView: 'status' },
-    tasksMode: { tasks: null, loading: false, addingForDate: null, sort: 'manual', filters: { pillar: [], area: [], pstatus: [] }, filterOpen: false },
+    tasksMode: { tasks: null, loading: false, addingForDate: null, sort: 'manual', filters: { pillar: [], area: [], pstatus: [] }, filterOpen: false, segment: 'scheduled' },
     taskSheet: { open: false, taskId: null, statusPickerOpen: false, notesEditing: false, titleEditing: false },
     captureInbox: { loading: false, items: [], classifying: false, classifyError: null, pendingCount: 0 },
     search: { query: '', projects: [], tasks: [], loading: false },
@@ -7767,6 +7799,7 @@ Output strict JSON array (no surrounding prose, no code fences):
     try {
       const p = JSON.parse(localStorage.getItem(TASKS_PREFS_KEY) || '{}');
       if (p.sort) state.tasksMode.sort = p.sort;
+      if (p.segment === 'scheduled' || p.segment === 'nodate') state.tasksMode.segment = p.segment;
       if (p.filters) state.tasksMode.filters = {
         pillar: p.filters.pillar || [], area: p.filters.area || [], pstatus: p.filters.pstatus || [],
       };
@@ -7775,7 +7808,7 @@ Output strict JSON array (no surrounding prose, no code fences):
   function saveTasksPrefs() {
     try {
       localStorage.setItem(TASKS_PREFS_KEY, JSON.stringify({
-        sort: state.tasksMode.sort, filters: state.tasksMode.filters,
+        sort: state.tasksMode.sort, filters: state.tasksMode.filters, segment: state.tasksMode.segment,
       }));
     } catch {}
   }
@@ -7873,6 +7906,22 @@ Output strict JSON array (no surrounding prose, no code fences):
     `;
   }
 
+  // Scheduled / No-date segment control. Counts reflect the post-filter set
+  // so they match what each segment will actually show.
+  function tasksSegmentHtml(scheduledCount, noDateCount) {
+    const seg = state.tasksMode.segment === 'nodate' ? 'nodate' : 'scheduled';
+    return `
+      <div class="tasks-segment" role="tablist">
+        <div class="tasks-seg-btn ${seg === 'scheduled' ? 'active' : ''}" data-tasks-segment="scheduled" role="tab" aria-selected="${seg === 'scheduled'}">
+          Scheduled <span class="tasks-seg-count">${scheduledCount}</span>
+        </div>
+        <div class="tasks-seg-btn ${seg === 'nodate' ? 'active' : ''}" data-tasks-segment="nodate" role="tab" aria-selected="${seg === 'nodate'}">
+          No date <span class="tasks-seg-count">${noDateCount}</span>
+        </div>
+      </div>
+    `;
+  }
+
   // Order index for a project's status — active first, then warm, then cold.
   const PROJECT_STATUS_ORDER = { active: 0, routine: 1, under_review: 2, paused: 3, idea: 4, done: 5, archived: 6 };
   function projectStatusRank(pid) {
@@ -7930,15 +7979,26 @@ Output strict JSON array (no surrounding prose, no code fences):
     // so the added task stays in the Weekend tile.
     const weekendAddDate = satStr > tomorrow ? satStr : sunStr;
 
-    const todayTasks = [], tomorrowTasks = [], weekendTasks = [], noDateTasks = [];
+    const todayTasks = [], tomorrowTasks = [], weekendTasks = [], laterTasks = [], noDateTasks = [];
     tasks.forEach(t => {
+      // Dropped leaves the active views (spec). The row stays in the cache so
+      // the 3s Undo can restore its prior status and it reappears here.
+      if (t.status === 'dropped') return;
       if (!t.do_date) noDateTasks.push(t);
       else if (t.do_date <= today) todayTasks.push(t);
       else if (t.do_date === tomorrow) tomorrowTasks.push(t);
       else if (weekendSet.has(t.do_date)) weekendTasks.push(t);
+      // Dated beyond the Today/Tomorrow/Weekend horizon — was previously
+      // invisible (fell through every bucket). Surfaces in the Later section.
+      else laterTasks.push(t);
     });
-    // Apply the chosen sort within each day bucket (sub-grouping preserves order)
+    // Apply the chosen sort within each day bucket (sub-grouping preserves order).
+    // Later additionally floors to soonest-date so the nearest items lead.
     [todayTasks, tomorrowTasks, weekendTasks, noDateTasks].forEach(arr => arr.sort(cmp));
+    laterTasks.sort((a, b) => {
+      const d = (a.do_date || '9999').localeCompare(b.do_date || '9999');
+      return d !== 0 ? d : cmp(a, b);
+    });
 
     const projectsById = {};
     state.projects.forEach(p => { projectsById[p.id] = p; });
@@ -7998,8 +8058,10 @@ Output strict JSON array (no surrounding prose, no code fences):
       return `${label} · ${dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`;
     }
 
-    function renderDaySection(label, sectionTasks, dayClass, dateKey) {
-      const addingOpen = state.tasksMode.addingForDate === dateKey;
+    function renderDaySection(label, sectionTasks, dayClass, dateKey, opts = {}) {
+      // Later spans many dates — no single date to quick-add into, so skip
+      // the add affordance for it.
+      const noAdd = !!opts.noAdd;
       const unscoped = [];
       const byProject = {};
       sectionTasks.forEach(t => {
@@ -8088,11 +8150,11 @@ Output strict JSON array (no surrounding prose, no code fences):
         <section class="tasks-day-section" data-day="${dateKey || 'no-date'}">
           <div class="day-header ${dayClass}">
             <div class="day-header-main"><span>${escapeHtml(dayLabel)}</span><span class="day-header-count">· ${sectionTasks.length}</span>${budgetHtml}</div>
-            <button class="day-header-add" data-focus-add="${dateKey || ''}" aria-label="Add a task to ${escapeHtml(dayClass === 'weekend' ? 'Weekend' : label)}">+</button>
+            ${noAdd ? '' : `<button class="day-header-add" data-focus-add="${dateKey || ''}" aria-label="Add a task to ${escapeHtml(dayClass === 'weekend' ? 'Weekend' : label)}">+</button>`}
           </div>
-          <div class="day-add-input-wrap open">
+          ${noAdd ? '' : `<div class="day-add-input-wrap open">
             <input type="text" class="day-add-input" placeholder="+ Add to ${escapeHtml(dayClass === 'weekend' ? 'Weekend' : label)}…" data-add-input-for="${dateKey || ''}" />
-          </div>
+          </div>`}
           ${overloadHtml}
           ${bodyContent}
           ${footer}
@@ -8102,18 +8164,26 @@ Output strict JSON array (no surrounding prose, no code fences):
 
     const weekendLabel = `Weekend · ${fmtShortDate(_sat)}–${fmtShortDate(_sun)}`;
     const showWeekend = isWeekday || weekendTasks.length;
-    const html = renderDaySection('Today', todayTasks, 'today', today)
-               + renderDaySection('Tomorrow', tomorrowTasks, 'tomorrow', tomorrow)
-               + (showWeekend ? renderDaySection(weekendLabel, weekendTasks, 'weekend', weekendAddDate) : '')
-               + (noDateTasks.length ? renderDaySection('No date', noDateTasks, 'no-date', null) : '');
+    const seg = state.tasksMode.segment === 'nodate' ? 'nodate' : 'scheduled';
+    const scheduledCount = todayTasks.length + tomorrowTasks.length + weekendTasks.length + laterTasks.length;
 
+    const html = seg === 'nodate'
+      ? renderDaySection('No date', noDateTasks, 'no-date', null)
+      : ( renderDaySection('Today', todayTasks, 'today', today)
+        + renderDaySection('Tomorrow', tomorrowTasks, 'tomorrow', tomorrow)
+        + (showWeekend ? renderDaySection(weekendLabel, weekendTasks, 'weekend', weekendAddDate) : '')
+        + renderDaySection('Later', laterTasks, 'later', null, { noAdd: true }) );
+
+    const segmentHtml = tasksSegmentHtml(scheduledCount, noDateTasks.length);
     const toolbar = tasksToolbarHtml(allTasks);
     const bodyHtml = html
       ? html
       : (tasksFiltersActive()
           ? `<div class="empty-state">No tasks match the current filters.<br/><span class="accent" data-tasks-clear-filters>Clear filters</span></div>`
-          : `<div class="empty-state">No open tasks for today, tomorrow, or unscheduled.<br/><span class="accent">Looks clear.</span></div>`);
-    list.innerHTML = toolbar + bodyHtml;
+          : (seg === 'nodate'
+              ? `<div class="empty-state">No undated tasks.<br/><span class="accent">Everything has a day.</span></div>`
+              : `<div class="empty-state">No open tasks for today, tomorrow, or this weekend.<br/><span class="accent">Looks clear.</span></div>`));
+    list.innerHTML = segmentHtml + toolbar + bodyHtml;
 
     // Attach gesture handlers — swipe always works; drag is gated by .draggable
     list.querySelectorAll('.task-swipe-wrap > .task').forEach(row => attachTaskGestures(row));
@@ -8259,6 +8329,7 @@ Output strict JSON array (no surrounding prose, no code fences):
   // Swipe-RIGHT: push date choices. Data-driven so V2's AI row is one
   // additive array entry, not a refactor.
   function pushDateOptions(taskId) {
+    const today = localDateStr();
     const tomorrow = localDateStr(new Date(Date.now() + 86400000));
     // Next week = next Monday (start of next week)
     const nextMonday = localDateStr(new Date(parseLocalDate(getMondayOfWeek()).getTime() + 7 * 86400000));
@@ -8267,11 +8338,16 @@ Output strict JSON array (no surrounding prose, no code fences):
     const nm = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const firstMonNextMonth = localDateStr(firstMondayOfMonth(nm.getFullYear(), nm.getMonth()));
     const mk = (key, label, date) => ({ key, label, sub: fmtDue(date), run: () => pushTaskToDate(taskId, date, label) });
-    const opts = [
+    const opts = [];
+    // "Today" — only when the task isn't already scheduled for today (covers
+    // undated, future, and overdue tasks; pointless when it's already today).
+    const cur = taskRefs(taskId)[0];
+    if (!cur || cur.do_date !== today) opts.push(mk('today', 'Today', today));
+    opts.push(
       mk('tomorrow', 'Tomorrow', tomorrow),
       mk('next-week', 'Next week', nextMonday),
       mk('next-month', 'Next month', firstMonNextMonth),
-    ];
+    );
     const smart = smartPushSuggestion(taskId);
     if (smart && smart.date) opts.push(mk('smart', smart.label, smart.date));
     return opts;
@@ -8358,13 +8434,54 @@ Output strict JSON array (no surrounding prose, no code fences):
           const opt = opts.find(o => o.key === btn.dataset.optKey);
           closeRowMenu();
           if (opt && typeof opt.run === 'function') opt.run();
+          return;
         }
+        // "Pick a date…" row. Desktop browsers do NOT pop the calendar from a
+        // plain click on an opacity:0 date input (only the picker icon or
+        // showPicker() does); mobile does. So open it explicitly. Freeze
+        // auto-close BEFORE the picker (and any viewport scroll) appears.
+        const pick = e.target.closest('.row-menu-pick');
+        if (pick) {
+          const input = pick.querySelector('input[type="date"]');
+          if (!input) return;
+          _rowMenuDatePicking = true;
+          _rowMenuDatePickTaskId = (state.rowMenu && state.rowMenu.taskId) || null;
+          // Safety: never let the freeze leak if the picker is dismissed
+          // without a change/cancel/blur event firing.
+          if (_rowMenuDateFreezeTimer) clearTimeout(_rowMenuDateFreezeTimer);
+          _rowMenuDateFreezeTimer = setTimeout(releaseRowMenuDateFreeze, 20000);
+          try { input.showPicker(); }
+          catch (_) { input.focus(); }
+        }
+      });
+      // Backstops for the freeze in case showPicker focuses the input
+      // (Chrome does) — focusin/out mirror the click-set freeze.
+      el.addEventListener('focusin', (e) => {
+        if (e.target && e.target.id === 'row-menu-date') {
+          _rowMenuDatePicking = true;
+          _rowMenuDatePickTaskId = (state.rowMenu && state.rowMenu.taskId) || _rowMenuDatePickTaskId;
+        }
+      });
+      el.addEventListener('focusout', (e) => {
+        // Cancelled picker (no change): release the freeze a beat later so a
+        // same-tick `change` still wins, then let normal auto-close resume.
+        if (e.target && e.target.id === 'row-menu-date') {
+          setTimeout(releaseRowMenuDateFreeze, 400);
+        }
+      });
+      // Picker dismissed without a selection (Esc / click-away). Release the
+      // freeze immediately so scroll/backdrop close can resume.
+      el.addEventListener('cancel', (e) => {
+        if (e.target && e.target.id === 'row-menu-date') releaseRowMenuDateFreeze();
       });
       el.addEventListener('change', (e) => {
         // Native "Pick a date" input — push kind only.
         if (e.target && e.target.id === 'row-menu-date') {
           const v = e.target.value;
-          const tid = state.rowMenu.taskId;
+          // state.rowMenu may already be cleared by a stray close — fall back
+          // to the id stashed when the picker opened.
+          const tid = (state.rowMenu && state.rowMenu.taskId) || _rowMenuDatePickTaskId;
+          releaseRowMenuDateFreeze();
           closeRowMenu();
           if (tid && v) pushTaskToDate(tid, v, `Pushed to ${fmtDue(v)}`);
         }
@@ -8453,6 +8570,19 @@ Output strict JSON array (no surrounding prose, no code fences):
   function suppressNextClick() {
     _suppressNextClick = true;
     setTimeout(() => { _suppressNextClick = false; }, 350);
+  }
+
+  // Native <input type="date"> in the push row-menu shifts/scrolls the viewport
+  // when its picker opens, which would trip the scroll/backdrop auto-close and
+  // detach the input before `change` fires. While picking, suppress auto-close
+  // and stash the taskId so the eventual `change` still has its target.
+  let _rowMenuDatePicking = false;
+  let _rowMenuDatePickTaskId = null;
+  let _rowMenuDateFreezeTimer = null;
+  function releaseRowMenuDateFreeze() {
+    _rowMenuDatePicking = false;
+    _rowMenuDatePickTaskId = null;
+    if (_rowMenuDateFreezeTimer) { clearTimeout(_rowMenuDateFreezeTimer); _rowMenuDateFreezeTimer = null; }
   }
 
   // — Gesture handler using touch + mouse events (more reliable than PointerEvent
@@ -12247,6 +12377,17 @@ Content-Type: application/json
       if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
       return;
     }
+    // Tasks mode: Scheduled / No-date segment
+    const segBtn = e.target.closest('[data-tasks-segment]');
+    if (segBtn) {
+      const next = segBtn.dataset.tasksSegment === 'nodate' ? 'nodate' : 'scheduled';
+      if (state.tasksMode.segment !== next) {
+        state.tasksMode.segment = next;
+        saveTasksPrefs();
+        renderTasksMode();
+      }
+      return;
+    }
     // Tasks mode: sort & filter toolbar
     if (e.target.closest('[data-tasks-filter-toggle]')) {
       state.tasksMode.filterOpen = !state.tasksMode.filterOpen;
@@ -12407,11 +12548,14 @@ Content-Type: application/json
     // menu (fires ~300ms after touchend, within the 350ms suppression window);
     // otherwise the menu would close itself the instant it opens.
     if (_suppressNextClick) return;
+    if (_rowMenuDatePicking) return;
     closeRowMenu();
   });
   // Anchored rect goes stale on scroll — just close (not worth scroll-tracking
   // a small menu). Capture phase so it catches scrolls on any container.
   document.addEventListener('scroll', () => {
+    // The native date picker scrolls the page on open — don't self-close.
+    if (_rowMenuDatePicking) return;
     if (state.rowMenu && state.rowMenu.open) closeRowMenu();
   }, { passive: true, capture: true });
   document.getElementById('task-sheet').addEventListener('click', (e) => {
