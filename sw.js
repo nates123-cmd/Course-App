@@ -1,5 +1,5 @@
-const CACHE_NAME = 'course-v21';
-const STATIC_ASSETS = ['./', './index.html', './manifest.json'];
+const CACHE_NAME = 'course-v22';
+const STATIC_ASSETS = ['./', './index.html', './manifest.json', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
