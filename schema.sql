@@ -33,7 +33,8 @@ create table course_projects (
   progress_pct int check (progress_pct between 0 and 100),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  last_activity_at timestamptz not null default now()
+  last_activity_at timestamptz not null default now(),
+  sort_order double precision
 );
 
 create table course_tasks (
@@ -104,6 +105,7 @@ create index course_projects_status_idx on course_projects(status);
 create index course_projects_pillar_idx on course_projects(pillar);
 create index course_projects_due_idx on course_projects(due_date);
 create index course_projects_last_activity_idx on course_projects(last_activity_at desc);
+create index course_projects_sort_order_idx on course_projects(sort_order);
 create index course_tasks_project_idx on course_tasks(project_id);
 create index course_tasks_status_idx on course_tasks(status);
 create index course_tasks_do_date_idx on course_tasks(do_date);

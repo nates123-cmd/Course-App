@@ -73,6 +73,90 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
   };
   React.useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
+  // Project reorder (long-press drag) — Sortable.js attaches to each pillar's
+  // active-list container. On drop, we renumber sort_order for every active
+  // project in that pillar (sequential, 1000-spaced) and persist to Supabase.
+  const activeListRefs = React.useRef({});       // pid -> DOM element
+  const sortableInstancesRef = React.useRef({}); // pid -> Sortable instance
+  const reloadDataRef = React.useRef(reloadData);
+  React.useEffect(() => { reloadDataRef.current = reloadData; }, [reloadData]);
+  // Bumping this forces Triage to re-render after we mutate window.PROJECTS
+  // in place, so the new order paints before the Supabase round-trip resolves.
+  const [, setReorderTick] = useState(0);
+
+  const persistReorder = React.useCallback(async (pillarId, oldIndex, newIndex) => {
+    if (oldIndex === newIndex) return;
+    const current = Object.values(window.PROJECTS || {})
+      .filter(p => (p.pillar || 'unfiled') === pillarId
+        && bucketFor((projStatus[p.id] || p.status)) === 'active')
+      .sort((a, b) => {
+        const ao = a.sortOrder == null ? Infinity : a.sortOrder;
+        const bo = b.sortOrder == null ? Infinity : b.sortOrder;
+        if (ao !== bo) return ao - bo;
+        const at = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+        const bt = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+        return bt - at;
+      });
+    if (oldIndex < 0 || oldIndex >= current.length) return;
+    const [moved] = current.splice(oldIndex, 1);
+    current.splice(Math.max(0, Math.min(newIndex, current.length)), 0, moved);
+    // Optimistic local update so React's next render matches the drop.
+    current.forEach((p, i) => {
+      const order = (i + 1) * 1000;
+      p.sortOrder = order;
+      if (window.PROJECTS[p.id]) window.PROJECTS[p.id].sortOrder = order;
+    });
+    setReorderTick((t) => t + 1);
+    try {
+      await Promise.all(current.map((p) =>
+        window.db.update('course_projects', p.id, { sort_order: p.sortOrder })
+      ));
+    } catch (err) {
+      console.error('Project reorder persist failed', err);
+      if (reloadDataRef.current) reloadDataRef.current();
+    }
+  }, [projStatus]);
+
+  const setActiveListRef = React.useCallback((pillarId) => (el) => {
+    const prev = activeListRefs.current[pillarId];
+    if (prev === el) return;
+    // Tear down any sortable bound to the previous element for this pillar.
+    if (sortableInstancesRef.current[pillarId]) {
+      try { sortableInstancesRef.current[pillarId].destroy(); } catch (e) {}
+      delete sortableInstancesRef.current[pillarId];
+    }
+    activeListRefs.current[pillarId] = el || null;
+    if (!el || typeof window.Sortable === 'undefined') return;
+    sortableInstancesRef.current[pillarId] = window.Sortable.create(el, {
+      delay: 450,
+      delayOnTouchOnly: true,
+      animation: 180,
+      ghostClass: 'proj-drag-ghost',
+      chosenClass: 'proj-drag-chosen',
+      dragClass: 'proj-drag-active',
+      fallbackOnBody: true,
+      forceFallback: true,
+      onEnd: (evt) => {
+        // Revert DOM mutation so React stays the source of truth, then persist.
+        if (evt.oldIndex !== evt.newIndex && evt.item && evt.item.parentNode) {
+          const parent = evt.item.parentNode;
+          const refChild = parent.children[evt.oldIndex] || null;
+          if (refChild && refChild !== evt.item) parent.insertBefore(evt.item, refChild);
+          else if (!refChild) parent.appendChild(evt.item);
+        }
+        persistReorder(pillarId, evt.oldIndex, evt.newIndex);
+      },
+    });
+  }, [persistReorder]);
+
+  // Clean up sortable instances on unmount.
+  React.useEffect(() => () => {
+    for (const s of Object.values(sortableInstancesRef.current)) {
+      try { s.destroy(); } catch (e) {}
+    }
+    sortableInstancesRef.current = {};
+  }, []);
+
   const openCaptureSheet = (kind, text, aiClassified = false, suggestedProjectId = null) => {
     setCaptureSheet({ kind, text, aiClassified, suggestedProjectId });
   };
@@ -424,6 +508,19 @@ ${text}`,
             g[bucket].push(p);
           }
 
+          // Active projects within each pillar sort by sort_order ascending
+          // (nulls last, then last_activity_at desc for stability).
+          for (const pid of Object.keys(grouped)) {
+            grouped[pid].active.sort((a, b) => {
+              const ao = a.sortOrder == null ? Infinity : a.sortOrder;
+              const bo = b.sortOrder == null ? Infinity : b.sortOrder;
+              if (ao !== bo) return ao - bo;
+              const at = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+              const bt = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+              return bt - at;
+            });
+          }
+
           // Stable pillar order: known pillars first, then anything else by name.
           const knownOrder = ['arrow', 'sunny', 'side', 'life'];
           const pillarIds = Object.keys(grouped).sort((a, b) => {
@@ -532,7 +629,9 @@ ${text}`,
                 </div>
                 <div className="pillar-body">
                   {g.active.length > 0 && <SubLabel>Active</SubLabel>}
-                  {g.active.map(renderProjectCard)}
+                  <div className="proj-active-list" ref={setActiveListRef(pid)}>
+                    {g.active.map(renderProjectCard)}
+                  </div>
 
                   {g.onhold.length > 0 && (
                     <SubLabel right={String(g.onhold.length)}>On hold</SubLabel>

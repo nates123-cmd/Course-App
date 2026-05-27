@@ -80,6 +80,7 @@
       pillarLabel: [pillarLabelMap[p.pillar] || p.pillar, p.work_area].filter(Boolean).join(' · '),
       tag: p.work_area || null,
       status: p.status,
+      sortOrder: p.sort_order == null ? null : Number(p.sort_order),
       lastActivityAt: p.last_activity_at,
       due: dueDate ? { m: dueDate.getMonth(), d: dueDate.getDate(), y: dueDate.getFullYear() } : null,
       dod: p.outcome || '',
