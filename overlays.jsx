@@ -329,25 +329,25 @@ function MenuDrawer({ onClose, onOpenProject, currentScreen, onGoto, pendingInbo
         </div>
 
         <div className="drawer-section">
-          <div className="drawer-row on" onClick={() => { onGoto('triage'); onClose(); }}>
+          <div className="drawer-row on" onClick={() => { onClose(); onGoto('triage'); }}>
             <span className="drawer-icon"><Icon.Inbox /></span>
             <span className="drawer-label">Triage</span>
             <span className="drawer-kbd">⌘1</span>
           </div>
-          <div className="drawer-row" onClick={() => { onGoto('inbox'); onClose(); }}>
+          <div className="drawer-row" onClick={() => { onClose(); onGoto('inbox'); }}>
             <span className="drawer-icon">
               <svg className="i" viewBox="0 0 24 24"><path d="M22 12c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2c4 0 7.4 2.3 9 5.7"/><path d="M22 4v6h-6"/></svg>
             </span>
             <span className="drawer-label">Inbox</span>
             {pendingInboxCount > 0 && <span className="drawer-count tnum">{pendingInboxCount}</span>}
           </div>
-          <div className="drawer-row" onClick={() => { onGoto('today'); onClose(); }}>
+          <div className="drawer-row" onClick={() => { onClose(); onGoto('today'); }}>
             <span className="drawer-icon">
               <svg className="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             </span>
             <span className="drawer-label">Today</span>
           </div>
-          <div className="drawer-row" onClick={() => { onGoto('today'); onClose(); }}>
+          <div className="drawer-row" onClick={() => { onClose(); onGoto('today'); }}>
             <span className="drawer-icon">
               <svg className="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
             </span>
@@ -388,7 +388,7 @@ function MenuDrawer({ onClose, onOpenProject, currentScreen, onGoto, pendingInbo
             <span className="drawer-label">Theme</span>
             <span className="drawer-meta">Use Tweaks</span>
           </div>
-          <div className="drawer-row" onClick={() => { onGoto('settings'); onClose(); }}>
+          <div className="drawer-row" onClick={() => { onClose(); onGoto('settings'); }}>
             <span className="drawer-icon"><Icon.Settings /></span>
             <span className="drawer-label">Settings</span>
           </div>

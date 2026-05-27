@@ -2367,7 +2367,7 @@ body {
 
 /* Menu drawer */
 .drawer-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 240;
   background: rgba(0, 0, 0, 0.55);
