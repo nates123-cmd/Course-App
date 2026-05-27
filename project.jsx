@@ -65,6 +65,7 @@ function Project({ projectId, onBack, reloadData }) {
   const [highlightIds, setHighlightIds] = useState([]);
   const [addingTask, setAddingTask] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // Re-seed transient UI when projectId changes; persisted tasks/state stay.
   React.useEffect(() => {
@@ -982,7 +983,7 @@ function Project({ projectId, onBack, reloadData }) {
           <span className="lbl">Tasks</span>
         </div>
         <div className="ptasks">
-          {tasks.map(t => <ProjectTaskRow key={t.id} task={t} />)}
+          {tasks.filter(t => !t.done).map(t => <ProjectTaskRow key={t.id} task={t} />)}
           {addingTask ? (
             <div className="add-task adding">
               <span className="plus-mini">+</span>
@@ -1003,6 +1004,20 @@ function Project({ projectId, onBack, reloadData }) {
               <span className="plus-mini">+</span>
               <span>New task</span>
             </div>
+          )}
+          {tasks.some(t => t.done) && (
+            <>
+              <div
+                className={`completed-toggle ${showCompleted ? 'open' : ''}`}
+                onClick={() => setShowCompleted(v => !v)}
+              >
+                <span className="caret">{showCompleted ? '▾' : '▸'}</span>
+                <span>Completed ({tasks.filter(t => t.done).length})</span>
+              </div>
+              {showCompleted && tasks.filter(t => t.done).map(t => (
+                <ProjectTaskRow key={t.id} task={t} />
+              ))}
+            </>
           )}
         </div>
       </div>

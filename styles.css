@@ -1668,6 +1668,28 @@ body {
   font-size: 11px;
 }
 
+.completed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-radius: var(--r-row);
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.completed-toggle:hover { background: var(--bg-elevated); color: var(--text-muted); }
+.completed-toggle .caret {
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
 /* Riff box */
 .riff {
   background: var(--bg-elevated);
