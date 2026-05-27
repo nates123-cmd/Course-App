@@ -289,7 +289,7 @@ ${text}`,
   };
 
   // Task row helper — clicking the row toggles done. Long-press opens the sheet.
-  const TaskRow = ({ id, label, extra }) => {
+  const TaskRow = ({ id, label, extra, due }) => {
     const meta = taskMeta[id];
     const lp = useLongPress(() => openSheet(id));
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -304,7 +304,9 @@ ${text}`,
         <span className="label">{label}</span>
         {meta?.kind && <span className={`task-kind k-${meta.kind}`}>{meta.kind}</span>}
         {meta?.estimate && <span className="task-est tnum">{meta.estimate}m</span>}
-        {meta?.date && <span className="tdue tnum">{MONTHS[meta.date.m]} {meta.date.d}</span>}
+        {meta?.date
+          ? <span className="tdue tnum">{MONTHS[meta.date.m]} {meta.date.d}</span>
+          : due && <span className="tdue tnum">{due}</span>}
         {extra}
       </div>
     );
@@ -443,7 +445,7 @@ ${text}`,
                     : t.waiting
                       ? <span className="waiting">waiting{typeof t.waiting === 'string' ? <> · <span className="waiting-who">{t.waiting}</span></> : null}</span>
                       : null;
-                  return <TaskRow key={t.id} id={t.id} label={t.label} extra={extra} />;
+                  return <TaskRow key={t.id} id={t.id} label={t.label} due={t.due} extra={extra} />;
                 })}
               </div>
             );
