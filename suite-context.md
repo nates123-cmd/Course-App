@@ -70,13 +70,12 @@ Friday Close from Course can push reflections into Still.
 ---
 
 ### Course — Project Execution
-**The cockpit.** Reads from Notion (Projects/Tasks/Goals/Pillars/Work Areas via Edge Function proxy), writes to Apple Reminders (via Shortcuts deeplinks). Six core screens:
-1. **Dashboard — Projects mode** (default) — Goals strip (collapsible), Tasks/Projects toggle, Morning Pulse card, stats, project list with Pillar dots
-2. **Dashboard — Tasks mode** — Today + Tomorrow horizon, tasks grouped by project, Send-to-Reminders per task
-3. **Project Detail** — Identity lineage, Outcome block, Claude-generated **Next Moves** panel (the hero), tasks with status/date toggle
-4. **Morning Pulse expanded** — Narrative + Wants Attention/On Pace + One Question (daily intervention)
-5. **Monday Open** — Guided per-project flow: still active? next move? when this week?
-6. **Friday Close** — Week-in-review narrative + Moved/Slipped + three reflective questions + optional push to Still
+**The cockpit.** Reads from Notion (Projects/Tasks/Goals/Pillars/Work Areas via Edge Function proxy), writes to Apple Reminders (via Shortcuts deeplinks). Rebuilt 2026-05-25 from a multi-surface ritual app (Dashboard / Morning Pulse / Monday Open / Friday Close) to a tighter **Triage + Project** model. Three surfaces:
+1. **Triage** (primary) — Pillar-by-pillar board. Each pillar shows Active projects (long-press-drag to reorder, persisted as `sort_order`), On hold, and Ideas. Project cards show name + first few open tasks (with due dates). FAB `+` opens the Capture sheet (project / task / note, Claude auto-classify).
+2. **Project** — Full project record. Status + DoD (Outcome) + due-date all inline-editable with Notion writeback. Tasks split into open (always shown) and completed (collapsed behind a "Completed (N)" toggle). Riff → AI proposal pipeline turns a free-form status note into extracted tasks + milestones + a summary in one shot. Claude-powered **Next Moves** suggestions below the task list.
+3. **Today** — Single-column day list of tasks with `do_date = today` across all projects.
+
+The pre-redesign ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) are archived in `_old_ui/` and not in the new design. Open question whether any return in V2.
 
 **Tone for Claude content:** Tight, imperative, parenthetical context only when it adds signal. "Confirm Casablanca lease terms with Cedric (sitting 6d)" not narrative explanation. Claude is the steady second voice in the cockpit, not a chatty assistant.
 

@@ -1,79 +1,72 @@
 # Course — Build Status
 
-Last updated: 2026-05-13
+Last updated: 2026-05-27
 
 ## Where we are
 
-Course is usable end-to-end: Setup Flow ran, real Notion data is imported, Dashboard renders projects, Project Detail works with Claude-powered Next Moves and inline editing (DoD, due date, progress, task done). Writebacks to Notion are live for status / outcome / due date. The two visible gaps are Tasks Mode and Morning Pulse — both per spec build order, both planned next.
+Course was rebuilt into a tighter **Triage + Project** model (started 2026-05-25). The new design is the source of truth; pre-redesign UI is archived in `_old_ui/` and will be deleted once everything is ported. Live at https://nates123-cmd.github.io/Course-App/, single-file PWA (one `index.html` + per-screen `.jsx` files via Babel CDN), shared Supabase project `xsmnfcmtbpeaccnyinkr`. Mobile-first 440px column, V2-ready for desktop multi-column (now landed — see below).
 
-## Build order progress
+The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from the V1 build are NOT in the new design. Open question whether any return in V2; for now Triage + Project carry the whole flow.
 
-| # | Item | Status |
-|---|------|--------|
-| 1 | Supabase schema + Edge Function + Setup Flow | ✅ Complete (6-step staged review, opt-in Notion writebacks) |
-| 2 | Dashboard shell + Active Projects + Pillar color system | ✅ Complete |
-| 3 | Project Detail + Next Moves (Claude) | ✅ Complete (V1) |
-| 4 | Quick Capture + inbox processing | ✅ Complete — captures write to `course_captures`; Inbox view triages pending items with Claude batch classify (project/task/goal/note), per-card edit, Accept commits the entity, Dismiss closes. Header link shows pending count. |
-| 5 | Tasks Mode + day grouping | ✅ Complete — drag-reorder, swipe push/done, cycle work type / effort, inline `+` add, day effort budget |
-| 6 | Push-to-Reminders via Shortcuts | ✅ Complete (two-way) — Task Sheet has a Send to Reminders button that opens the `CourseAddReminder` Shortcut deeplink with `title\|date\|project\|notes` payload, then marks the task with a `reminders_uuid` marker so the sheet shows ✓ Sent on re-open. Settings → Reminders sync expands an in-place guide with the exact Shortcut specs, the Supabase endpoint, and a copy-anon-key button — covers both outbound (`CourseAddReminder`) and inbound (`CourseSyncIn`, posts new Reminders into `course_captures`, run on open via Personal Automation). |
-| 7 | Morning Pulse + web push + expanded view | ⚠️ Partial — Claude-generated narrative + one question + wants-attention/on-pace lists, cached per-day to `course_pulses`. Web push notifications still deferred. |
-| 8 | Monday Open flow | ✅ Complete — walks Active projects one at a time, three questions each (Yes/Push/Drop · next move · day chips), Claude batch-suggests next moves, commits to `course_reviews` with per-project timestamped `decisions_json`. "Yes" decisions auto-create `course_tasks`; "Drop" sets project to Archived + Notion writeback. |
-| 9 | Friday Close + Still integration | ✅ Complete — Claude-written "The Read" narrative, computed Moved/Slipped sections, three textareas (drop/push-forward/surprised), Save-to-Still toggle that POSTs Q3 to Still's `reflections` table. "Review" link in dashboard header auto-routes by day of week (Mon-Thu → Open, Fri-Sun → Close); each flow has a "Switch to ___" link to swap manually. |
-| 10 | Stall detection logic | ✅ Complete — `getStallInfo()` flags active projects with ≥7d idle + due within 30d. Dashboard rows show `!` + "Stalled Xd" in due column; At Risk stat count includes stalled. Project Detail shows a risk-bordered banner with last-move meta and a Mark addressed button that persists to `course_stall_states` and silences re-flagging for 7 days. Pulse `wants_attention` reason now reads "stalled Xd". Task-level analogue: `isTaskDrifting()` (≥3 forward reschedules) surfaces a `↻ N×` pill on task rows + a "Drifting" section in Pulse. Backed by `course_tasks.reschedule_count` + a Postgres trigger that auto-increments on `do_date` shifts forward. |
-| 11 | Selective Notion import (paste-URL) | ✅ Complete — Settings → "Import a Notion page" opens a sheet that takes any Notion URL, parses the page ID (32-char or hyphenated UUID), `fetch_page`s via the Edge Function, auto-detects type from the parent DB (falls back to a manual Project/Goal/Task picker), shows a preview of name + key fields, warns if the page already exists in `course_*` tables, and writes the row on confirm. Projects jump to their Detail page post-import. |
-| 12 | Goals strip refinement + Pillar color settings | ✅ Goals chips now show a computed state ("On track" / "Stalled" / "N sketched" / "Done"), computed progress (% of linked projects done) with manual override, and a project-count sub-line. Tapping a chip opens a Goal Sheet with inline-editable name / description / target date, the computed state + progress meter, the linked-projects list (tappable to Project Detail), and an Archive button. End-of-strip "+ Add a goal" chip opens the sheet in create mode (name / description / pillar picker / target date). Pillar color settings still deferred. |
-| 13 | Cross-app reads (Still, Tick) | ❌ V1.1+ |
+## Recent commits (2026-05-27 session)
 
-## Beyond original build order
-
-Real-use feedback drove these earlier than the build order would have:
-
-- **Inline DoD editor** (formerly "Outcome") with Notion writeback to `Outcome` rich_text
-- **Inline due-date editor** in meta row with native date picker + Notion writeback to `Due`
-- **Manual progress override** — draggable slider, step 5, ticks at 25/50/75/100. Falls back to computed % of tasks done when null (label reads "Progress · auto")
-- **Undo toast** after task done/reopen
-- **Hierarchical Pillars→Areas in Setup Flow** — per-Area Pillar dropdown, honors user's Notion data model
-- **Per-user data quirks handled** — Setup pulls Complete=false (not Task Status) since most user tasks have no status; includes unstatused projects + Paused / Under Review; unscoped tasks are first-class
+- **`142dab3`** — Fix project-switch leaking previous project's tasks/state. `usePersistedState` only reads localStorage on mount; switching projects kept the previous project's `tasks`/`dod`/`riff`/`dueDate`/`status` in state and the write-back effect was overwriting the new project's localStorage with the stale values. Remounting via `key={openProjectId}` on `<Project>` forces every initializer to re-read the correct project's keys. *Existing data may be corrupted from prior switches — keys `course-v2:project.<id>.tasks` etc.; `course_projects.outcome` in Supabase may also be wrong.*
+- **`9228167`** — Hide completed tasks behind a `Completed (N)` toggle on Project view. Open tasks render as before; completed tasks collapse under a disclosure row that only appears when there's ≥1 done task. Defaults to closed on every project open.
+- **`e316c79`** — Restrict mobile zoom (`maximum-scale=1.0`, `user-scalable=no`); surface task `due` strings on Triage `TaskRow`s; bump SW cache to `course-v23` so deployed PWAs pick up fixes on next open.
+- **`aa4314d`** — Long-press drag-to-reorder active projects within each pillar in Triage. Holds for ~450ms to lift, drag to new slot. New `sort_order` column on `course_projects` (double precision, indexed); renumbered with 1000-spacing per affected pillar on each drop. Sortable.js via CDN. Optimistic local mutation + background Supabase write — only `reloadData` on failure. SW bumped to `course-v24`.
 
 ## Architecture / direction decisions
 
-- **Course owns active data; Notion → readable archive** — solidified by [Course owns everything direction](memory/feedback_course_owns_everything.md). New screens default to inline-editable with Course→Notion writebacks. Don't suggest "edit in Notion" for operational fields.
-- **Layout discipline** — all spacing/sizing in CSS vars, no max-width on individual components; mobile-first 440px column today, V2 multi-column desktop reachable without rewrites.
-- **Writeback fields so far**: project status, project outcome, project due_date, task status (+ Complete checkbox when status=done). Project progress is *not* written back (no clean target field; user's Notion has a `Completion` rollup that's auto-computed).
+- **Course owns active data; Notion → readable archive.** Solidified by [Course owns everything direction](memory/feedback_course_owns_everything.md). New screens default to inline-editable with Course→Notion writebacks. Don't suggest "edit in Notion" for operational fields.
+- **Layout discipline** — all spacing/sizing in CSS vars, no max-widths on individual components. Mobile single-pane (~440px), desktop master-detail with Triage left + Project right. Reflow happens on the outer panes only, not the cards. Per [Course layout discipline](memory/feedback_course_layout_discipline.md).
+- **Stable persistence per project.** Anything stored under a `project.${projectId}.X` key must remount cleanly when projectId changes — `usePersistedState` is initializer-only on mount, so always pass `key={projectId}` to project-scoped components.
+- **Writeback fields**: project status, project outcome, project due_date, task status (+ `Complete` checkbox when status=done), project pillar. Task creation creates a Notion page via the proxy. Progress not written back (no clean target field in user's Notion model — `Completion` is a rollup).
+- **Suite cross-app reads**: Today reads `course_projects` (id, name, status, pillar, work_area, sort_order, last_activity_at, due_date, outcome) and `course_tasks` (id, project_id, title, status, effort, work_type, day_order, do_date, pillar, notion_url) via its `usePillars` hook. No realtime — Today refreshes on mount/visit. Sort, due-date chip, and outcome subtitle in Today are driven by Course writes.
 
-## Known V1 gaps
+## Surfaces
 
-- Add-task on Project Detail uses a browser `prompt()` — needs inline editor.
-- One hardcoded value: `1.5px` borders on task checkbox (off the integer spacing scale). Likely fine; flagged in spec discussion.
-- Setup retry has no idempotency — if import fails partway through, retry duplicates. Workaround: truncate `course_*` tables + clear `course_setup_complete` localStorage key.
-- No way to manually re-enter Setup once `course_setup_complete = true` (testing-only need).
-- Service worker cache name still `course-v1`; hasn't been bumped despite many changes (no production deploy yet, so it doesn't matter — localhost bypasses SW).
+| Surface | Purpose | Notes |
+|---------|---------|-------|
+| **Triage** | Pillar-by-pillar board of active projects + ideas + on-hold; capture sheet; queue of pending decisions for stalled projects | Long-press-drag reorder of active projects within each pillar |
+| **Project** | Full project record — name, status, pillar, due, DoD, milestones, tasks, riff → AI proposal pipeline, status notes, next moves (Claude) | Completed tasks hidden behind a toggle; component remounts on projectId change |
+| **Today** | Day-stripe of tasks with `do_date = today` from across projects | Single-column list in the new design |
+| **Capture sheet** | Triage's `+` FAB — quick add of project / task / note (with Claude auto-classify) | Writes to `course_captures` (note) or directly to projects/tasks |
+| **Settings** | Tweaks panel, accent picker, density, Notion + Reminders sync hooks | Surfaces in app shell |
 
-## Schema changes since initial setup
+## Data shape (current)
 
-Run these if you're setting up fresh (already in `schema.sql`):
+- `course_projects` — id, name, outcome (DoD), notes, status, priority, start_date, due_date, completed_date, pillar, work_area, goal_id, notion_url, progress_pct, created_at, updated_at, last_activity_at, **`sort_order`** (added 2026-05-27)
+- `course_tasks` — id, project_id, title, status, do_date, completed_date, effort, work_type, type, notes, person_dependency, work_area, pillar, notion_url, day_order, reschedule_count
+- `course_status_notes` — id, project_id, body, summary, source, created_at
+- `course_milestones` — id, project_id, label, marker_state, target_date, sort_order
+- `course_captures` — id, body, status (pending|imported|dismissed), pillar (added 2026-05-26)
+- `course_goals` (V1-era; may be folded later)
+- `course_pulses`, `course_reviews`, `course_stall_states` (V1-era ritual tables; not used by new UI; keep for now)
 
-```sql
-alter table course_tasks add column notion_url text;
-alter table course_projects add column progress_pct int check (progress_pct between 0 and 100);
-alter table course_tasks add column day_order int;
-```
+## Known gaps / V2
 
-## Next planned
-
-**Tasks Mode** is next (build step 5). Then **Project Detail polish** (inline add-task editor, status edit), then **Morning Pulse** (build step 7 — first big Claude integration after Next Moves).
-
-Notes added to spec V2 section that aren't in build order:
-
-- **Project hierarchy (parent/child)** with Claude-assisted re-parenting ("Pickling nests under Cooking")
-- **Idea resurfacing** — Pulse surfaces backburned Ideas when user has capacity
-- **Calendar integration** (read-only) — Pulse + Monday Open read Google Calendar
+- **No setup-flow re-entry** — once `course_setup_complete = true`, no manual re-import. Mostly a dev-only need.
+- **No realtime to Today** — Today picks up Course changes on its next refresh (mount). Realtime channel subscription is a future task.
+- **Idea resurfacing, parent/child projects, calendar integration** — V2 (in spec).
+- **Notion writeback for `sort_order`** — Course doesn't writeback project order to Notion (no target field; Course is the source of truth for ordering).
+- **Cross-pillar reorder via drag** — out of scope for V1; status/pillar pickers still own that flow.
 
 ## Where things live
 
-- `index.html` — entire app (~2500 lines)
-- `schema.sql` — Supabase schema
-- `supabase/functions/course-notion-fetch/index.ts` — Notion proxy Edge Function (verify / search_databases / fetch_db_schema / query_db / fetch_page / update_page)
-- `course-spec.md` — canonical product spec; mockups are visual source of truth
-- `course-*.html` — mockups (dashboard, project detail, tasks mode, morning pulse, monday open, friday close)
-- `dev-config.js` — gitignored; sets `localStorage['anthropic_api_key']` for local dev
+- `index.html` + `app.jsx` — shell, responsive layout, data load
+- `triage.jsx` — Triage screen (pillars, ideas, queue, FAB, long-press reorder)
+- `project.jsx` — Project detail (riff → AI proposal, tasks with hide-completed toggle, milestones, status log)
+- `today.jsx` — Today list
+- `next-moves.jsx` — Claude-powered next-action proposals on Project view
+- `capture-sheet.jsx`, `overlays.jsx`, `tweaks-panel.jsx`, `settings.jsx`, `status-log.jsx`, `components.jsx` — supporting UI
+- `projects-data.jsx` — legacy in-file seed (mostly unused after Supabase load)
+- `supabase-client.js` — REST wrapper + `loadCourseData` shaping function
+- `claude-shim.js` — direct Claude API calls
+- `notion-writeback.js` — write-through to Notion via the Edge Function proxy
+- `sw.js` — service worker (cache name bumped per deploy; currently `course-v24`)
+- `styles.css` — design tokens + per-component styles
+- `schema.sql` — source-of-truth schema (mirrors what's in Supabase)
+- `migrations/*.sql` — incremental migrations applied via MCP / dashboard
+- `supabase/functions/course-notion-fetch/` — Notion proxy Edge Function
+- `dev-config.js` — gitignored; local Claude API key + dev Supabase URL/key
+- `_old_ui/` — pre-redesign single-file PWA (will be removed once nothing references it)
