@@ -225,49 +225,47 @@ function App() {
   const openProject = (id) => { setOpenProjectId(id || projectIds[0] || null); setScreen('project'); };
   const back = () => setScreen('triage');
 
-  // Mobile-first column. No max-width on inner cards — V2 desktop multi-column
-  // can drop --column-w and the children should reflow without rewrites.
+  // Responsive shell: mobile single-pane, desktop master-detail (Triage left,
+  // Project/Today right). Layout-discipline rule: no max-widths on cards;
+  // components reflow via media queries on the outer panes only.
+  const isReady = loadState === 'ready' && projectIds.length > 0;
   return (
-    <div style={{
-      minHeight: '100dvh',
-      width: '100%',
-      display: 'flex',
-      justifyContent: 'center',
-      background: 'var(--bg)',
-    }}>
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: 'var(--column-w, 440px)',
-        minHeight: '100dvh',
-        overflow: 'hidden',
-      }}>
-        {loadState === 'loading' && <LoadingShim />}
-        {loadState === 'error' && <ErrorShim message={loadError} onRetry={reloadData} />}
-        {loadState === 'ready' && projectIds.length === 0 && (
-          <EmptyState onReload={reloadData} />
-        )}
-        {loadState === 'ready' && projectIds.length > 0 && screen === 'triage' && (
-          <Triage
-            onOpenProject={openProject}
-            density={t.density}
-            showQueue={t.showQueue}
-            reloadData={reloadData}
-            pendingInboxCount={pendingInboxCount}
-            onChangeScreen={setScreen}
-          />
-        )}
-        {loadState === 'ready' && projectIds.length > 0 && screen === 'project' && (
-          <Project projectId={openProjectId} onBack={back} reloadData={reloadData} />
-        )}
-        {loadState === 'ready' && projectIds.length > 0 && screen === 'today' && (
-          <Today
-            onOpenProject={openProject}
-            onBack={() => setScreen('triage')}
-            reloadData={reloadData}
-          />
-        )}
-      </div>
+    <div className="course-shell">
+      {loadState === 'loading' && <LoadingShim />}
+      {loadState === 'error' && <ErrorShim message={loadError} onRetry={reloadData} />}
+      {loadState === 'ready' && projectIds.length === 0 && <EmptyState onReload={reloadData} />}
+      {isReady && (
+        <div className="course-layout" data-screen={screen}>
+          <div className="course-pane course-pane-left">
+            <Triage
+              onOpenProject={openProject}
+              density={t.density}
+              showQueue={t.showQueue}
+              reloadData={reloadData}
+              pendingInboxCount={pendingInboxCount}
+              onChangeScreen={setScreen}
+            />
+          </div>
+          <div className="course-pane course-pane-right">
+            {screen === 'project' && (
+              <Project projectId={openProjectId} onBack={back} reloadData={reloadData} />
+            )}
+            {screen === 'today' && (
+              <Today
+                onOpenProject={openProject}
+                onBack={() => setScreen('triage')}
+                reloadData={reloadData}
+              />
+            )}
+            {screen === 'triage' && (
+              <div className="right-pane-placeholder">
+                <div className="rpp-title">Course</div>
+                <div className="rpp-hint">Pick a project from Triage, or capture something new with the +.</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <NotionSyncIndicator />
 
