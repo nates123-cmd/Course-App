@@ -1169,29 +1169,34 @@ body {
 }
 .course-pane { min-width: 0; }
 
-/* Mobile (default + narrow): show one pane at a time based on screen state */
+/* Single-pane swap by default — only the active screen's pane is visible */
 .course-layout[data-screen="triage"]  .course-pane-right { display: none; }
 .course-layout[data-screen="project"] .course-pane-left  { display: none; }
 .course-layout[data-screen="today"]   .course-pane-left  { display: none; }
 
-/* Desktop: side-by-side. Triage stays visible; right pane is the focused work */
+/* On larger viewports, the lone active pane gets a wider centered column.
+   Triage and Today stay primary surfaces — no split. */
+@media (min-width: 700px) {
+  .course-layout { max-width: 720px; }
+}
+
+/* Only Project view goes split master-detail (Triage rail + Project work).
+   Triage stays the dominant home; you only see the rail once you're deep
+   in a specific project. */
 @media (min-width: 1000px) {
-  .course-layout {
+  .course-layout[data-screen="project"] {
     max-width: none;
     display: flex;
   }
-  .course-layout[data-screen="triage"]  .course-pane-right,
-  .course-layout[data-screen="project"] .course-pane-left,
-  .course-layout[data-screen="today"]   .course-pane-left {
+  .course-layout[data-screen="project"] .course-pane-left {
     display: block;
-  }
-  .course-pane-left {
-    flex: 0 0 520px;
+    flex: 0 0 420px;
     border-right: 0.5px solid var(--border);
     height: 100dvh;
     overflow-y: auto;
   }
-  .course-pane-right {
+  .course-layout[data-screen="project"] .course-pane-right {
+    display: block;
     flex: 1;
     height: 100dvh;
     overflow-y: auto;
