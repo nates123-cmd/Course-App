@@ -43,6 +43,19 @@ The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from t
 - `course_goals` (V1-era; may be folded later)
 - `course_pulses`, `course_reviews`, `course_stall_states` (V1-era ritual tables; not used by new UI; keep for now)
 
+## Pick up here
+
+**Unverified after 2026-05-27 session — confirm before doing more:**
+- The project-switch state-leak fix (`142dab3`) writes the right localStorage keys now, but prior switches may have **corrupted existing per-project localStorage and `course_projects.outcome` in Supabase**. Spot-check projects you've switched between recently. Affected keys: `course-v2:project.<id>.{tasks,dod,riff,due,milestones,status}`.
+- The PWA had to be force-refreshed twice (close-reopen cycles) to pick up new bundles after the SW bumps. Confirm `course-v24` is the live cache via DevTools `caches.keys()` if anything looks like an old build.
+- The long-press drag UI was wired but not yet tested by the user on mobile. Risks: drag glitches if Triage re-renders mid-drag (Sortable instances are destroyed/recreated on every Triage render — fine in theory but unverified under load). If you see "lift then snap back" or "tap opens project instead of drag," that's where to look.
+
+**Explicitly open threads from this session:**
+- No realtime Course → Today sync. Today refreshes on mount only. A Supabase realtime channel subscription on `course_projects` + `course_tasks` would close the gap. Out of scope unless asked.
+- `_old_ui/` still on disk — nothing in the new code references it; safe to delete when the next person feels like cleanup.
+- The Course Bar (V2 conversational command line described in `suite-context.md`) is not started.
+- Ritual surfaces (Morning Pulse / Monday Open / Friday Close) — pending the open question whether any return in V2. No work in progress.
+
 ## Known gaps / V2
 
 - **No setup-flow re-entry** — once `course_setup_complete = true`, no manual re-import. Mostly a dev-only need.
