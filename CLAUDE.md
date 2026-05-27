@@ -2,26 +2,19 @@
 
 The fifth app in Nate's personal PWA suite (alongside Tick, Still, Tide, Break). A project execution app — the cockpit between Notion (notes/reference) and Apple Reminders (thin dated tasks).
 
+## UX redesign in progress (2026-05-25)
+
+Course was rebuilt from a multi-surface ritual app (Dashboard / Today / Morning Pulse / Monday Open / Friday Close) to a tighter **Triage + Project** model. The new design lives in the root `*.jsx` files (React-in-HTML loaded by `index.html` via Babel CDN). The pre-redesign single-file PWA is archived in `_old_ui/` and will be deleted once the Notion + Claude wiring is ported across. The ritual surfaces are not in the new design — open question whether any return in V2.
+
 ## Read these first
 
-- `course-spec.md` — full app spec, data model, screens, tech notes, V2 considerations
+- `course-spec.md` — full app spec, data model, tech notes. **Stale in places** w.r.t. the new UX; treat as historical until updated.
 - `suite-context.md` — broader suite context (shared stack, design grammar, all five apps)
-
-## Mockups (visual source of truth)
-
-Reference these for spacing, sizing, component anatomy:
-
-- `course-dashboard-pillars.html` — Projects mode (default home)
-- `course-dashboard-tasks.html` — Today tab, **V1 build target**
-- `course-proposed-day.html` — Today tab, V2 target (don't build yet, but keep V1 structurally compatible)
-- `course-project-detail.html` — Project Detail view
-- `course-morning-pulse.html` — Morning Pulse expanded
-- `course-monday-open.html` — Monday Open flow
-- `course-friday-close.html` — Friday Close flow
+- `index.html` + `app.jsx` + `triage.jsx` + `project.jsx` — current visual + interaction source of truth (replaces the old mockups)
 
 ## Stack
 
-- Single-file PWA (one `index.html`) — match the pattern of Nate's other apps
+- React-in-HTML PWA (Babel CDN, no build step) — one `index.html` + per-screen `.jsx` files
 - Supabase REST for data (shared Supabase project)
 - Direct Claude API browser calls (no build step, no Node server)
 - Notion API via Supabase Edge Function proxy (read-only after initial setup, except setup-time writeback for archiving unimported items)

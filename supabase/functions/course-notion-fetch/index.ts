@@ -114,6 +114,24 @@ async function dispatch(action: string, params: Record<string, unknown>, token: 
       }, token);
     }
 
+    case 'create_page': {
+      // Used by Course-native creation flows (e.g. new project from Capture)
+      // to push a fresh row into the matching Notion DB.
+      const databaseId = params.database_id as string | undefined;
+      const properties = params.properties as Record<string, unknown> | undefined;
+      if (!databaseId) throw httpErr('database_id required', 400);
+      if (!properties) throw httpErr('properties required', 400);
+      const reqBody: Record<string, unknown> = {
+        parent: { database_id: databaseId },
+        properties,
+      };
+      if (params.children) reqBody.children = params.children;
+      return await notion('/pages', {
+        method: 'POST',
+        body: JSON.stringify(reqBody),
+      }, token);
+    }
+
     default:
       throw httpErr(`Unknown action: ${action}`, 400);
   }
