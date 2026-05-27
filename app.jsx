@@ -248,7 +248,7 @@ function App() {
           </div>
           <div className="course-pane course-pane-right">
             {screen === 'project' && (
-              <Project projectId={openProjectId} onBack={back} reloadData={reloadData} />
+              <Project key={openProjectId} projectId={openProjectId} onBack={back} reloadData={reloadData} />
             )}
             {screen === 'today' && (
               <Today
