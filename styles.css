@@ -82,6 +82,20 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "ss01", "cv11";
+  /* App-like selection model: dragging or long-pressing UI chrome (e.g. the
+     task drag-reorder) must never start a text selection or the iOS copy
+     callout. Re-enabled below on editable fields and anything .selectable. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Editable surfaces still need real text selection + the iOS edit callout. */
+input, textarea, [contenteditable="true"], .selectable {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* ─────────────────────────────────────────
