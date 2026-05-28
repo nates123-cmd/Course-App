@@ -157,9 +157,14 @@
   }
 
   async function createProjectPage({ name, pillar, outcome, due_date, status }) {
-    const dbId = (typeof localStorage !== 'undefined')
+    let dbId = (typeof localStorage !== 'undefined')
       ? localStorage.getItem('notion_projects_db_id')
       : null;
+    // Fall back to the verified default so project creation/push works even
+    // before a sync has seeded the localStorage id.
+    if (!dbId && typeof window !== 'undefined' && window.notionSync) {
+      dbId = window.notionSync.DEFAULT_PROJECTS_DB_ID;
+    }
     if (!dbId) {
       console.info('notion-writeback: skipping createProjectPage (set localStorage.notion_projects_db_id)');
       emit('project-create', true);

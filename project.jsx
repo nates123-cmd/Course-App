@@ -226,6 +226,34 @@ function Project({ projectId, onBack, reloadData }) {
     });
     if (window.notionWriteback) window.notionWriteback.projectStatus(data.notionUrl, newStatus);
   };
+
+  // Push a local-only project (no notion_url) into Notion, then link it so all
+  // future edits write back. Notion's Pillar is a rollup off Work Area, which
+  // we can't set via the API, so the pushed page has no Work Area/Pillar yet.
+  const [pushing, setPushing] = useState(false);
+  const pushToNotion = async () => {
+    if (pushing || data.notionUrl || !window.notionWriteback) return;
+    setPushing(true);
+    try {
+      const due_date = data.due
+        ? `${data.due.y}-${String(data.due.m + 1).padStart(2, '0')}-${String(data.due.d).padStart(2, '0')}`
+        : null;
+      const page = await window.notionWriteback.createProjectPage({
+        name: data.name, pillar: data.pillar, outcome: data.dod || '', due_date, status,
+      });
+      if (page && page.url) {
+        data.notionUrl = page.url; // optimistic registry mutation
+        await window.db.update('course_projects', projectId, { notion_url: page.url });
+        if (reloadData) await reloadData();
+      } else {
+        console.warn('Push to Notion returned no page (check notion_projects_db_id / integration share)');
+      }
+    } catch (err) {
+      console.error('Push to Notion failed', err);
+    } finally {
+      setPushing(false);
+    }
+  };
   const pickStatus = (id) => {
     if (id === 'paused') { setStatusOpen(false); setHoldPrompt('choose'); }
     else {
@@ -632,7 +660,7 @@ function Project({ projectId, onBack, reloadData }) {
               </div>
             )}
           </span>
-          {data.notionUrl && (
+          {data.notionUrl ? (
             <a
               href={data.notionUrl}
               target="_blank"
@@ -643,6 +671,14 @@ function Project({ projectId, onBack, reloadData }) {
             >
               ↗ Notion
             </a>
+          ) : (
+            <span
+              className="pill"
+              style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: pushing ? 0.6 : 1 }}
+              onClick={(e) => { e.stopPropagation(); pushToNotion(); }}
+            >
+              {pushing ? 'Pushing…' : '↗ Push to Notion'}
+            </span>
           )}
           {tagEdit !== null ? (
             <input
