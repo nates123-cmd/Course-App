@@ -878,7 +878,7 @@ ${text}`,
         <InboxOverlay onClose={() => setOverlay(null)} onOpenProject={onOpenProject} reloadData={reloadData} />
       )}
       {overlay === 'settings' && (
-        <SettingsSheet onClose={() => setOverlay(null)} />
+        <SettingsSheet onClose={() => setOverlay(null)} reloadData={reloadData} />
       )}
       {overlay === 'menu' && (
         <MenuDrawer

@@ -2,12 +2,31 @@
 // Each field reads/writes localStorage on blur. Bottom-sheet pattern, reuses
 // .sheet-overlay/.sheet styles.
 
-function SettingsSheet({ onClose }) {
+function SettingsSheet({ onClose, reloadData }) {
   const [anthKey, setAnthKey]     = React.useState(() => localStorage.getItem('anthropic_api_key') || '');
   const [projDb, setProjDb]       = React.useState(() => localStorage.getItem('notion_projects_db_id') || '');
   const [tasksDb, setTasksDb]     = React.useState(() => localStorage.getItem('notion_tasks_db_id') || '');
   const [showKey, setShowKey]     = React.useState(false);
   const [savedField, setSavedField] = React.useState(null);
+  const [syncState, setSyncState] = React.useState('idle'); // 'idle' | 'running' | 'done' | 'error'
+  const [syncMsg, setSyncMsg]     = React.useState(null);
+
+  const runSync = async () => {
+    if (syncState === 'running' || !window.notionSync) return;
+    setSyncState('running');
+    setSyncMsg('Starting…');
+    try {
+      const res = await window.notionSync.syncProjects({ onProgress: setSyncMsg });
+      setSyncState('done');
+      setSyncMsg(`Synced ${res.total} projects · ${res.inserted} new, ${res.updated} updated`);
+      // Reflect the resolved/self-healed DB id back into the field.
+      setProjDb(localStorage.getItem('notion_projects_db_id') || '');
+      if (reloadData) await reloadData();
+    } catch (err) {
+      setSyncState('error');
+      setSyncMsg(err.message || String(err));
+    }
+  };
 
   React.useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose(); };
@@ -104,6 +123,24 @@ function SettingsSheet({ onClose }) {
             placeholder="32-char hex (or paste full Notion URL)"
           />
           <div className="sheet-row-hint">New tasks created in Course push here, linked to project.</div>
+        </div>
+
+        <div className="sheet-row">
+          <span className="sheet-row-label">Sync from Notion</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              className={`chip primary ${syncState === 'running' ? 'disabled' : ''}`}
+              onClick={runSync}
+            >{syncState === 'running' ? 'Syncing…' : 'Pull projects'}</span>
+            {syncMsg && (
+              <span style={{
+                fontSize: 12,
+                color: syncState === 'error' ? 'var(--risk)' : 'var(--text-muted)',
+                flex: 1, minWidth: 0,
+              }}>{syncMsg}</span>
+            )}
+          </div>
+          <div className="sheet-row-hint">Pulls all non-archived projects from Notion into Course (insert + update). Done/Archived are not pulled.</div>
         </div>
 
         <div className="sheet-actions">
