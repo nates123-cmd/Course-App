@@ -340,8 +340,14 @@ input, textarea, [contenteditable="true"], .selectable {
   color: var(--text-faint);
 }
 
+/* Faint dotted rule delineating the project name from its task rows (patch #9aa55a45). */
+.proj > .proj-head {
+  padding-bottom: 9px;
+  border-bottom: 1px dotted var(--border);
+}
+
 .proj .tasks {
-  margin-top: 10px;
+  margin-top: 9px;
   display: flex; flex-direction: column;
   gap: 1px;
 }
