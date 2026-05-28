@@ -41,7 +41,8 @@ create table course_tasks (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references course_projects(id) on delete cascade,
   title text not null,
-  status text not null default 'next'
+  -- Nullable: a blank status is the default for new tasks (open + unset).
+  status text
     check (status in ('triage','next','in_progress','waiting','done','dropped','pushed')),
   do_date date,
   completed_date date,

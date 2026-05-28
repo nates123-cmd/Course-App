@@ -130,7 +130,7 @@ function useLongPress(callback, { ms = 450 } = {}) {
 function TaskSheet({ task, onClose, onSave, onDelete, onPushReminders }) {
   const [draft, setDraft] = React.useState(() => ({
     label: task.label || '',
-    status: task.done ? 'done' : (task.status || 'todo'),  // 'todo' | 'doing' | 'waiting' | 'done'
+    status: task.done ? 'done' : (task.status || 'none'),  // 'none' | 'todo' | 'doing' | 'waiting' | 'done'
     date: task.date || null,        // {m,d,y}
     estimate: task.estimate || null, // 5 | 15 | 30 | 60
     kind: task.kind || null,         // 'deep' | 'admin'
@@ -157,6 +157,7 @@ function TaskSheet({ task, onClose, onSave, onDelete, onPushReminders }) {
   const dateLabel = draft.date ? `${MONTHS[draft.date.m]} ${draft.date.d}` : 'No date';
 
   const STATUS = [
+    { id: 'none',    label: 'None' },
     { id: 'todo',    label: 'To do' },
     { id: 'doing',   label: 'In Progress' },
     { id: 'waiting', label: 'Waiting' },

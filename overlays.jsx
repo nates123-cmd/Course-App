@@ -195,7 +195,7 @@ function InboxOverlay({ onClose, onOpenProject, reloadData }) {
       await window.db.insert('course_tasks', {
         project_id: projectId,
         title: captureText,
-        status: 'next',
+        // No status → blank by default (DB default; null post-migration).
       });
       await window.db.update('course_captures', captureId, {
         status: 'processed',
@@ -310,7 +310,7 @@ function MenuDrawer({ onClose, onOpenProject, currentScreen, onGoto, pendingInbo
 
   // Group projects by pillar for the menu.
   const pillarOrder = ['arrow', 'sunny', 'side', 'life'];
-  const pillarNames = { arrow: 'Arrow', sunny: 'Slow Down Sunny', side: 'Side Gigs', life: 'Life' };
+  const pillarNames = { arrow: 'Arrow', sunny: 'Slow Down Sunny', side: 'Side Projects', life: 'Life' };
   const grouped = {};
   Object.entries(window.PROJECTS || {}).forEach(([id, p]) => {
     if (p.status === 'active' || p.status === 'paused' || p.status === 'routine') {

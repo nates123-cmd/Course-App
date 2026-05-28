@@ -135,7 +135,8 @@ function Project({ projectId, onBack, reloadData }) {
           window.db.insert('course_tasks', {
             project_id: projectId,
             title: t.label,
-            status: t.next ? 'next' : 'next',
+            // Only the AI-flagged-urgent task gets 'next'; the rest stay blank.
+            ...(t.next ? { status: 'next' } : {}),
           }).catch((err) => console.error('Riff task insert failed', err))
         ));
       }
@@ -262,10 +263,10 @@ function Project({ projectId, onBack, reloadData }) {
   const toggleTaskDone = (id) => {
     const target = tasks.find((t) => t.id === id);
     const next = target ? !target.done : true;
-    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: next, rawStatus: next ? 'done' : 'next' } : t)));
+    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: next, rawStatus: next ? 'done' : null } : t)));
     const today = new Date().toISOString().slice(0, 10);
     window.db.update('course_tasks', id, {
-      status: next ? 'done' : 'next',
+      status: next ? 'done' : null, // un-checking returns the task to blank
       completed_date: next ? today : null,
     }).catch((err) => {
       console.error('Task toggle failed', err);
@@ -273,7 +274,7 @@ function Project({ projectId, onBack, reloadData }) {
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: !next } : t)));
     });
     if (target && target.notionUrl && window.notionWriteback) {
-      window.notionWriteback.taskStatus(target.notionUrl, next ? 'done' : 'next');
+      window.notionWriteback.taskStatus(target.notionUrl, next ? 'done' : null);
     }
   };
   const commitNewTask = async () => {
@@ -290,7 +291,7 @@ function Project({ projectId, onBack, reloadData }) {
       const inserted = await window.db.insert('course_tasks', {
         project_id: projectId,
         title: v,
-        status: 'next',
+        // No status → blank by default (DB default; null post-migration).
       });
       const realId = inserted && inserted[0] && inserted[0].id;
       if (realId) {
@@ -299,7 +300,6 @@ function Project({ projectId, onBack, reloadData }) {
       if (realId && window.notionWriteback) {
         const page = await window.notionWriteback.createTaskPage({
           title: v,
-          status: 'next',
           projectNotionUrl: data.notionUrl,
         });
         if (page && page.url) {
@@ -351,7 +351,9 @@ function Project({ projectId, onBack, reloadData }) {
     return { m: d.getMonth(), d: d.getDate(), y: d.getFullYear() };
   };
   const SHEET_STATUS_FROM_SCHEMA = { next: 'todo', in_progress: 'doing', waiting: 'waiting', done: 'done' };
-  const SHEET_STATUS_TO_SCHEMA   = { todo: 'next', doing: 'in_progress', waiting: 'waiting', done: 'done' };
+  const SHEET_STATUS_TO_SCHEMA   = { none: null, todo: 'next', doing: 'in_progress', waiting: 'waiting', done: 'done' };
+  // 'none' and anything unknown map to a blank (null) status.
+  const sheetStatusToSchema = (s) => (s in SHEET_STATUS_TO_SCHEMA ? SHEET_STATUS_TO_SCHEMA[s] : null);
   const sheetTask = sheetTaskId ? tasks.find((t) => t.id === sheetTaskId) : null;
 
   const saveTaskSheet = async (draft) => {
@@ -367,9 +369,9 @@ function Project({ projectId, onBack, reloadData }) {
       effort: draft.estimate ? `${draft.estimate}m`.replace('60m', '1h') : null,
       workType: draft.kind || null,
       notes: draft.note || null,
-      rawStatus: SHEET_STATUS_TO_SCHEMA[draft.status] || 'next',
+      rawStatus: sheetStatusToSchema(draft.status),
     } : t));
-    const newSchemaStatus = SHEET_STATUS_TO_SCHEMA[draft.status] || 'next';
+    const newSchemaStatus = sheetStatusToSchema(draft.status);
     const newIsoDate = dateFromPick(draft.date);
     const newProjectId = draft.projectId || null;
     const projectChanged = newProjectId !== projectId;
@@ -486,11 +488,11 @@ function Project({ projectId, onBack, reloadData }) {
   const PILLAR_CHOICES = [
     { id: 'arrow', label: 'Arrow' },
     { id: 'sunny', label: 'Slow Down Sunny' },
-    { id: 'side',  label: 'Side Gigs' },
+    { id: 'side',  label: 'Side Projects' },
     { id: 'life',  label: 'Life' },
     { id: null,    label: 'Unfiled' },
   ];
-  const PILLAR_LABEL_MAP = { arrow: 'Arrow', sunny: 'Slow Down Sunny', side: 'Side Gigs', life: 'Life' };
+  const PILLAR_LABEL_MAP = { arrow: 'Arrow', sunny: 'Slow Down Sunny', side: 'Side Projects', life: 'Life' };
   const pickPillar = (newPillar) => {
     setPillarOpen(false);
     if (newPillar === data.pillar) return;
@@ -1103,7 +1105,7 @@ function Project({ projectId, onBack, reloadData }) {
           task={{
             label:     sheetTask.label,
             done:      sheetTask.done,
-            status:    sheetTask.done ? 'done' : (SHEET_STATUS_FROM_SCHEMA[sheetTask.rawStatus] || 'todo'),
+            status:    sheetTask.done ? 'done' : (SHEET_STATUS_FROM_SCHEMA[sheetTask.rawStatus] || 'none'),
             date:      parseDateStr(sheetTask.due),
             estimate:  sheetTask.effort
               ? Number(String(sheetTask.effort).replace('h', '').replace('m', '')) * (String(sheetTask.effort).includes('h') ? 60 : 1) || null

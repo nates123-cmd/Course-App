@@ -79,7 +79,7 @@ The pre-redesign ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dash
 
 **Tone for Claude content:** Tight, imperative, parenthetical context only when it adds signal. "Confirm Casablanca lease terms with Cedric (sitting 6d)" not narrative explanation. Claude is the steady second voice in the cockpit, not a chatty assistant.
 
-**Pillars (top-level life domains):** Arrow (work), Slow Down Sunny (personal/wellness), Side Gigs (creative/income). Stored as tag strings on projects with color-coded dots in the UI. Pillar colors are muted to fit the warm-dark palette.
+**Pillars (top-level life domains):** Arrow (work), Slow Down Sunny (personal/wellness), Side Projects (creative/income). Stored as tag strings on projects with color-coded dots in the UI. Pillar colors are muted to fit the warm-dark palette.
 
 **Setup is a staged review flow, not an auto-dump:** Connect Notion → Review Pillars/Work Areas → Review Goals → Review Projects → Review Tasks → Confirm. Course writes Archived/Dropped back to Notion for unimported items (the one and only exception to "Course doesn't write to Notion"). After setup, Notion is read-only reference.
 

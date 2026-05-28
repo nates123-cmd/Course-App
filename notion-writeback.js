@@ -67,13 +67,15 @@
 
   async function taskStatus(notionUrl, status) {
     const pageId = pageIdFrom(notionUrl);
+    if (!pageId) return;
+    // A blank/null status clears Notion's Task Status select. Keep the Complete
+    // checkbox in sync — the user tracks open-ness via Complete (not Task
+    // Status) in most of their workflow.
     const notionStatus = TASK_STATUS_TO_NOTION[status];
-    if (!pageId || !notionStatus) return;
-    // Keep Notion's Complete checkbox in sync — user tracks open-ness via
-    // Complete (not Task Status) in most of their workflow.
-    const properties = { 'Task Status': { select: { name: notionStatus } } };
-    if (status === 'done') properties.Complete = { checkbox: true };
-    if (status !== 'done') properties.Complete = { checkbox: false };
+    const properties = {
+      'Task Status': notionStatus ? { select: { name: notionStatus } } : { select: null },
+      Complete: { checkbox: status === 'done' },
+    };
     try {
       await efFetch('update_page', { page_id: pageId, body: { properties } });
       emit('task-status', true);

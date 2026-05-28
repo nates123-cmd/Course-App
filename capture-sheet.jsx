@@ -8,10 +8,11 @@ function CaptureSheet({ kind, initialText, aiClassified, suggestedProjectId, onC
   const PILLARS = [
     { id: 'arrow', label: 'Arrow' },
     { id: 'sunny', label: 'Slow Down Sunny' },
-    { id: 'side',  label: 'Side Gigs' },
+    { id: 'side',  label: 'Side Projects' },
     { id: 'life',  label: 'Life' },
   ];
   const TASK_STATUS = [
+    { id: 'none',    label: 'None' },
     { id: 'todo',    label: 'To do' },
     { id: 'doing',   label: 'In Progress' },
     { id: 'waiting', label: 'Waiting' },
@@ -36,7 +37,7 @@ function CaptureSheet({ kind, initialText, aiClassified, suggestedProjectId, onC
     if (kind === 'project') return { name: initialText, pillar: 'arrow', dod: '', due: null };
     if (kind === 'task') {
       const proj = initialProject && window.PROJECTS ? window.PROJECTS[initialProject] : null;
-      return { label: initialText, projectId: initialProject, pillar: proj ? (proj.pillar || null) : null, status: 'todo', date: null, estimate: null, workType: null };
+      return { label: initialText, projectId: initialProject, pillar: proj ? (proj.pillar || null) : null, status: 'none', date: null, estimate: null, workType: null };
     }
     return { text: initialText, pillar: null, projectId: suggestedProjectId || null }; // note
   });
@@ -281,7 +282,7 @@ Return ONLY JSON: { "projectId": "<uuid>" | null }`,
 
             <div className="sheet-row">
               <span className="sheet-row-label">Status</span>
-              <div className="sheet-segs sheet-segs-3">
+              <div className="sheet-segs">
                 {TASK_STATUS.map(s => (
                   <span
                     key={s.id}

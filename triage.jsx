@@ -8,7 +8,7 @@ const PILLAR_DISPLAY = {
   arrow: 'Arrow',
   sunny: 'Slow Down Sunny',
   life:  'Life',
-  side:  'Side Gigs',
+  side:  'Side Projects',
 };
 const pillarDisplayName = (id) =>
   PILLAR_DISPLAY[id] || (id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Unfiled');
@@ -78,7 +78,7 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
     setNewTaskText('');
     if (!v) return;
     try {
-      await window.db.insert('course_tasks', { title: v, pillar: pillarId, status: 'next' });
+      await window.db.insert('course_tasks', { title: v, pillar: pillarId });
       if (reloadData) await reloadData();
     } catch (err) {
       console.error('New pillar task insert failed', err);
@@ -185,9 +185,10 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
     ? `${pick.y}-${String(pick.m + 1).padStart(2, '0')}-${String(pick.d).padStart(2, '0')}`
     : null;
 
-  // Map the capture sheet's task status (todo/doing/waiting) to the schema enum.
+  // Map the capture sheet's task status to the schema enum. 'none' (and any
+  // unknown) → null, i.e. a blank status (the default for new tasks).
   const taskStatusToSchema = (s) =>
-    ({ todo: 'next', doing: 'in_progress', waiting: 'waiting' }[s] || 'next');
+    ({ todo: 'next', doing: 'in_progress', waiting: 'waiting', done: 'done' }[s] || null);
 
   const saveCapture = async (draft) => {
     setCaptureSheet(null);
@@ -232,7 +233,8 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
           title: draft.label.trim(),
           project_id: draft.projectId || null,
           pillar: draft.projectId ? null : (draft.pillar || null),
-          status: taskStatus,
+          // Omit status when blank so the DB default applies (null post-migration).
+          ...(taskStatus ? { status: taskStatus } : {}),
           do_date: taskDoDate,
           effort: draft.estimate ? `${draft.estimate}m`.replace('60m', '1h') : null,
           work_type: draft.workType || null,
@@ -364,7 +366,7 @@ ${text}`,
     setTaskDone(s => ({ ...s, [id]: next }));
     const today = new Date().toISOString().slice(0, 10);
     window.db.update('course_tasks', id, {
-      status: next ? 'done' : 'next',
+      status: next ? 'done' : null, // un-checking returns the task to blank
       completed_date: next ? today : null,
     }).catch((err) => {
       console.error('Task update failed', err);
@@ -383,7 +385,7 @@ ${text}`,
       }
     }
     if (taskNotionUrl && window.notionWriteback) {
-      window.notionWriteback.taskStatus(taskNotionUrl, next ? 'done' : 'next');
+      window.notionWriteback.taskStatus(taskNotionUrl, next ? 'done' : null);
     }
   };
   const openSheet = (id) => setSheetTaskId(id);

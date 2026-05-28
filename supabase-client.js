@@ -87,7 +87,7 @@
   function shapeProject(p, tasksById, notesById, milestonesById) {
     const pillarLabelMap = {
       arrow: 'Arrow', sunny: 'Sunny', life: 'Life',
-      side: 'Side Gigs', // legacy seed key, harmless if unused
+      side: 'Side Projects', // legacy seed key, harmless if unused
     };
     const dueDate = p.due_date ? new Date(p.due_date + 'T00:00:00') : null;
     return {
