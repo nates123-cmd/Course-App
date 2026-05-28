@@ -485,9 +485,60 @@ function Project({ projectId, onBack, reloadData }) {
     setSheetTaskId(null);
   };
 
+  // Task reorder (drag handle) — Sortable on the open-task list. On drop we
+  // renumber sort_order (1000-spaced) for every open task and persist.
+  const tasksRef = React.useRef(tasks);
+  React.useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+  const taskSortableRef = React.useRef(null);
+
+  const persistTaskReorder = React.useCallback((oldIndex, newIndex) => {
+    if (oldIndex === newIndex) return;
+    const all = tasksRef.current || [];
+    const open = all.filter((t) => !t.done);
+    const done = all.filter((t) => t.done);
+    if (oldIndex < 0 || oldIndex >= open.length) return;
+    const [moved] = open.splice(oldIndex, 1);
+    open.splice(Math.max(0, Math.min(newIndex, open.length)), 0, moved);
+    const renumbered = open.map((t, i) => ({ ...t, sortOrder: (i + 1) * 1000 }));
+    setTasks([...renumbered, ...done]);
+    renumbered.forEach((t) => {
+      window.db.update('course_tasks', t.id, { sort_order: t.sortOrder })
+        .catch((err) => console.error('Task reorder persist failed', err));
+    });
+  }, [setTasks]);
+
+  const setTaskSortRef = React.useCallback((el) => {
+    if (taskSortableRef.current) {
+      try { taskSortableRef.current.destroy(); } catch (e) {}
+      taskSortableRef.current = null;
+    }
+    if (!el || typeof window.Sortable === 'undefined') return;
+    taskSortableRef.current = window.Sortable.create(el, {
+      handle: '.task-grip',
+      animation: 180,
+      ghostClass: 'task-drag-ghost',
+      chosenClass: 'task-drag-chosen',
+      dragClass: 'task-drag-active',
+      fallbackOnBody: true,
+      forceFallback: true,
+      onEnd: (evt) => {
+        if (evt.oldIndex !== evt.newIndex && evt.item && evt.item.parentNode) {
+          const parent = evt.item.parentNode;
+          const refChild = parent.children[evt.oldIndex] || null;
+          if (refChild && refChild !== evt.item) parent.insertBefore(evt.item, refChild);
+          else if (!refChild) parent.appendChild(evt.item);
+        }
+        persistTaskReorder(evt.oldIndex, evt.newIndex);
+      },
+    });
+  }, [persistTaskReorder]);
+  React.useEffect(() => () => {
+    if (taskSortableRef.current) { try { taskSortableRef.current.destroy(); } catch (e) {} }
+  }, []);
+
   // Per-row component so each task gets its own useLongPress without
   // violating Rules of Hooks (no hook calls inside .map callbacks).
-  const ProjectTaskRow = ({ task }) => {
+  const ProjectTaskRow = ({ task, grip }) => {
     const lp = useLongPress(() => setSheetTaskId(task.id));
     return (
       <div
@@ -496,6 +547,14 @@ function Project({ projectId, onBack, reloadData }) {
         onClick={() => { if (!lp.didFire()) toggleTaskDone(task.id); }}
         {...lp.bind}
       >
+        {grip && (
+          <span
+            className="task-grip"
+            aria-hidden="true"
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >⠿</span>
+        )}
         <span className="box"></span>
         <span className="label">{task.label}</span>
         {task.waiting && (
@@ -1021,7 +1080,9 @@ function Project({ projectId, onBack, reloadData }) {
           <span className="lbl">Tasks</span>
         </div>
         <div className="ptasks">
-          {tasks.filter(t => !t.done).map(t => <ProjectTaskRow key={t.id} task={t} />)}
+          <div className="task-sort" ref={setTaskSortRef}>
+            {tasks.filter(t => !t.done).map(t => <ProjectTaskRow key={t.id} task={t} grip />)}
+          </div>
           {addingTask ? (
             <div className="add-task adding">
               <span className="plus-mini">+</span>

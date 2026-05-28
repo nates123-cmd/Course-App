@@ -67,6 +67,7 @@
   function shapeTask(t) {
     return {
       id: t.id, label: t.title,
+      sortOrder: t.sort_order == null ? null : Number(t.sort_order),
       done: t.status === 'done',
       next: t.status === 'next',
       waiting: t.status === 'waiting' ? (t.person_dependency || true) : undefined,
@@ -121,7 +122,7 @@
   async function loadCourseData() {
     const [projects, tasks, notes, milestones, pendingCaptures] = await Promise.all([
       db.select('course_projects', 'select=*&order=last_activity_at.desc'),
-      db.select('course_tasks', 'select=*&order=created_at.asc'),
+      db.select('course_tasks', 'select=*&order=sort_order.asc.nullslast,created_at.asc'),
       db.select('course_status_notes', 'select=*&order=created_at.desc').catch(() => []),
       db.select('course_milestones', 'select=*&order=sort_order.asc').catch(() => []),
       db.select('course_captures', 'select=id&status=eq.pending').catch(() => []),

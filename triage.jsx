@@ -222,6 +222,70 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
     sortableInstancesRef.current = {};
   }, []);
 
+  // Pillar loose-task reorder (drag handle) — mirrors project reorder above,
+  // scoped per pillar. Renumber sort_order (1000-spaced) and persist.
+  const pillarTaskListRefs = React.useRef({});
+  const pillarTaskSortablesRef = React.useRef({});
+
+  const persistPillarTaskReorder = React.useCallback((pillarId, oldIndex, newIndex) => {
+    if (oldIndex === newIndex) return;
+    const arr = (window.PILLAR_TASKS && window.PILLAR_TASKS[pillarId]) || [];
+    const open = arr
+      .filter((t) => !t.done && t.rawStatus !== 'dropped')
+      .sort((a, b) => {
+        const ao = a.sortOrder == null ? Infinity : a.sortOrder;
+        const bo = b.sortOrder == null ? Infinity : b.sortOrder;
+        return ao - bo;
+      });
+    if (oldIndex < 0 || oldIndex >= open.length) return;
+    const [moved] = open.splice(oldIndex, 1);
+    open.splice(Math.max(0, Math.min(newIndex, open.length)), 0, moved);
+    open.forEach((t, i) => { t.sortOrder = (i + 1) * 1000; });
+    setReorderTick((t) => t + 1);
+    Promise.all(open.map((t) =>
+      window.db.update('course_tasks', t.id, { sort_order: t.sortOrder })
+    )).catch((err) => {
+      console.error('Pillar task reorder persist failed', err);
+      if (reloadDataRef.current) reloadDataRef.current();
+    });
+  }, []);
+
+  const setPillarTaskListRef = React.useCallback((pillarId) => (el) => {
+    const prev = pillarTaskListRefs.current[pillarId];
+    if (prev === el) return;
+    if (pillarTaskSortablesRef.current[pillarId]) {
+      try { pillarTaskSortablesRef.current[pillarId].destroy(); } catch (e) {}
+      delete pillarTaskSortablesRef.current[pillarId];
+    }
+    pillarTaskListRefs.current[pillarId] = el || null;
+    if (!el || typeof window.Sortable === 'undefined') return;
+    pillarTaskSortablesRef.current[pillarId] = window.Sortable.create(el, {
+      handle: '.task-grip',
+      animation: 180,
+      ghostClass: 'task-drag-ghost',
+      chosenClass: 'task-drag-chosen',
+      dragClass: 'task-drag-active',
+      fallbackOnBody: true,
+      forceFallback: true,
+      onEnd: (evt) => {
+        if (evt.oldIndex !== evt.newIndex && evt.item && evt.item.parentNode) {
+          const parent = evt.item.parentNode;
+          const refChild = parent.children[evt.oldIndex] || null;
+          if (refChild && refChild !== evt.item) parent.insertBefore(evt.item, refChild);
+          else if (!refChild) parent.appendChild(evt.item);
+        }
+        persistPillarTaskReorder(pillarId, evt.oldIndex, evt.newIndex);
+      },
+    });
+  }, [persistPillarTaskReorder]);
+
+  React.useEffect(() => () => {
+    for (const s of Object.values(pillarTaskSortablesRef.current)) {
+      try { s.destroy(); } catch (e) {}
+    }
+    pillarTaskSortablesRef.current = {};
+  }, []);
+
   const openCaptureSheet = (kind, text, aiClassified = false, suggestedProjectId = null) => {
     setCaptureSheet({ kind, text, aiClassified, suggestedProjectId });
   };
@@ -447,7 +511,7 @@ ${text}`,
   };
 
   // Task row helper — clicking the row toggles done. Long-press opens the sheet.
-  const TaskRow = ({ id, label, extra, due, urgent }) => {
+  const TaskRow = ({ id, label, extra, due, urgent, grip }) => {
     const meta = taskMeta[id];
     const lp = useLongPress(() => openSheet(id));
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -458,6 +522,14 @@ ${text}`,
         onClick={(e) => { if (!lp.didFire()) toggleTask(id, e); }}
         {...lp.bind}
       >
+        {grip && (
+          <span
+            className="task-grip"
+            aria-hidden="true"
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >⠿</span>
+        )}
         <span className="box"></span>
         <span className="label">{label}</span>
         {meta?.kind && <span className={`task-kind k-${meta.kind}`}>{meta.kind}</span>}
@@ -588,7 +660,13 @@ ${text}`,
           // tasks (no projects) still get a section.
           const pillarTasksMap = window.PILLAR_TASKS || {};
           const openPillarTasksFor = (pid) =>
-            (pillarTasksMap[pid] || []).filter((t) => !t.done && t.rawStatus !== 'dropped');
+            (pillarTasksMap[pid] || [])
+              .filter((t) => !t.done && t.rawStatus !== 'dropped')
+              .sort((a, b) => {
+                const ao = a.sortOrder == null ? Infinity : a.sortOrder;
+                const bo = b.sortOrder == null ? Infinity : b.sortOrder;
+                return ao - bo;
+              });
           for (const pid of Object.keys(pillarTasksMap)) {
             if (openPillarTasksFor(pid).length > 0 && !grouped[pid]) {
               grouped[pid] = { active: [], onhold: [], idea: [] };
@@ -818,14 +896,16 @@ ${text}`,
                       <>
                         {ptasks.length > 0 && <SubLabel right={String(ptasks.length)}>Tasks</SubLabel>}
                         <div className="pillar-tasks">
-                          {ptasks.map((t) => {
-                            const extra = t.next
-                              ? <span className="next">next</span>
-                              : t.waiting
-                                ? <span className="waiting">waiting{typeof t.waiting === 'string' ? <> · <span className="waiting-who">{t.waiting}</span></> : null}</span>
-                                : null;
-                            return <TaskRow key={t.id} id={t.id} label={t.label} due={t.due} extra={extra} />;
-                          })}
+                          <div className="task-sort" ref={setPillarTaskListRef(pid)}>
+                            {ptasks.map((t) => {
+                              const extra = t.next
+                                ? <span className="next">next</span>
+                                : t.waiting
+                                  ? <span className="waiting">waiting{typeof t.waiting === 'string' ? <> · <span className="waiting-who">{t.waiting}</span></> : null}</span>
+                                  : null;
+                              return <TaskRow key={t.id} id={t.id} label={t.label} due={t.due} extra={extra} grip />;
+                            })}
+                          </div>
                           {adding ? (
                             <div className="add-task adding">
                               <span className="plus-mini">+</span>
