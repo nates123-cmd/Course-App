@@ -497,6 +497,26 @@ ${text}`,
   const togglePillar = (id) => setCollapsed(s => ({ ...s, [id]: !s[id] }));
   const toggleIdeas = (id) => setIdeasOpen(s => ({ ...s, [id]: !s[id] }));
   const dismiss = (id) => setDismissed(s => ({ ...s, [id]: true }));
+  // Rewrite a held project's check-in/resurface date by appending a fresh hold
+  // note. snoozeDays>0 pushes the date that many days from today; null strips
+  // the date clause entirely (stays on hold, stops resurfacing). String surgery
+  // on the existing note preserves its flavor ("blocked" vs "Setting down").
+  const rewriteHoldNote = async (id, snoozeDays) => {
+    const proj = window.PROJECTS && window.PROJECTS[id];
+    const prevBody = (proj && proj.statusSeed && proj.statusSeed[0] && proj.statusSeed[0].body) || 'On hold.';
+    let body;
+    if (snoozeDays) {
+      const d = new Date(); d.setDate(d.getDate() + snoozeDays);
+      const newDate = d.toISOString().slice(0, 10);
+      body = prevBody.replace(/((?:check in|resurface)\s+)\d{4}-\d{2}-\d{2}/i, `$1${newDate}`);
+      if (body === prevBody) body = prevBody.replace(/\.?\s*$/, '') + `. Check in ${newDate}.`;
+    } else {
+      body = prevBody.replace(/\s*(?:—\s*)?(?:check in|resurface)\s+\d{4}-\d{2}-\d{2}\.?/i, '').trim() || 'On hold.';
+    }
+    if (window.addStatusNoteForProject) window.addStatusNoteForProject(id, body, 'manual', body);
+    await window.db.insert('course_status_notes', { project_id: id, body, summary: body, source: 'manual' });
+  };
+
   const resolveQueue = async (id, action) => {
     setQueueResolved((s) => ({ ...s, [id]: action }));
     try {
@@ -509,8 +529,22 @@ ${text}`,
         if (proj && proj.notionUrl && window.notionWriteback) {
           window.notionWriteback.projectStatus(proj.notionUrl, action);
         }
+      } else if (action === 'reactivate') {
+        await window.db.update('course_projects', id, { status: 'active', last_activity_at: new Date().toISOString() });
+        const proj = window.PROJECTS && window.PROJECTS[id];
+        if (proj && proj.notionUrl && window.notionWriteback) {
+          window.notionWriteback.projectStatus(proj.notionUrl, 'active');
+        }
+      } else if (action === 'snooze' || action === 'hold-clear') {
+        await rewriteHoldNote(id, action === 'snooze' ? 7 : null);
       }
-      if (reloadData) reloadData();
+      if (reloadData) await reloadData();
+      // These actions change the underlying data, so the item won't regenerate
+      // — clear the optimistic resolved flag so a *future* check-in for the same
+      // project isn't permanently suppressed. (Session-only dismisses keep it.)
+      if (action === 'reactivate' || action === 'snooze' || action === 'hold-clear') {
+        setQueueResolved((s) => { const next = { ...s }; delete next[id]; return next; });
+      }
     } catch (err) {
       console.error('Queue resolve failed', err);
       setQueueResolved((s) => { const next = { ...s }; delete next[id]; return next; });
@@ -588,11 +622,44 @@ ${text}`,
     );
   };
 
-  // Pending Decisions queue — active projects with no last_activity_at update
-  // for N days. Surfaces stalls so they can be re-routed or revived.
+  // Pending Decisions queue. Two sources:
+  //  1. Check-in due — on-hold projects whose "Check in"/"resurface" date (stored
+  //     in the latest hold note) has arrived. These come first.
+  //  2. Stalls — active projects with no last_activity_at update for N days.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  // Pull the check-in/resurface date out of the latest hold note (commitHold
+  // controls this exact text, so the parse is stable).
+  const checkInDateOf = (p) => {
+    const note = (p.statusSeed && p.statusSeed[0] && p.statusSeed[0].body) || '';
+    const m = note.match(/(?:check in|resurface)\s+(\d{4}-\d{2}-\d{2})/i);
+    return m ? m[1] : null;
+  };
+  const checkInItems = Object.values(window.PROJECTS || {})
+    .filter((p) => p.status === 'paused')
+    .map((p) => ({ p, date: checkInDateOf(p) }))
+    .filter((x) => x.date && x.date <= todayStr) // ISO yyyy-mm-dd → lexical compare is chronological
+    .sort((a, b) => a.date.localeCompare(b.date)) // most-overdue first
+    .map(({ p, date }) => {
+      const pillarLabel = PILLAR_DISPLAY[p.pillar] || (p.pillar ? p.pillar : 'Unfiled');
+      const note = (p.statusSeed && p.statusSeed[0] && p.statusSeed[0].body) || '';
+      const wm = note.match(/waiting on:\s*([^.]+?)\s*\.?\s*(?:check in|$)/i);
+      const waitingOn = wm ? wm[1].trim() : null;
+      return {
+        id: p.id,
+        kind: 'checkin',
+        proj: `${pillarLabel} · ${p.name}`,
+        text: waitingOn ? `Check-in due — waiting on ${waitingOn}.` : `Check-in due (set for ${date}).`,
+        actions: [
+          { label: 'Reactivate',   kind: 'primary', resolve: 'reactivate' },
+          { label: 'Snooze 1 week', kind: '',        resolve: 'snooze' },
+          { label: 'Keep on hold',  kind: 'ghost',   resolve: 'hold-clear' },
+        ],
+      };
+    });
+
   const STALL_DAYS = 14;
   const stallThreshold = Date.now() - STALL_DAYS * 86400000;
-  const queueItems = Object.values(window.PROJECTS || {})
+  const stallItems = Object.values(window.PROJECTS || {})
     .filter((p) => p.status === 'active' && p.lastActivityAt && new Date(p.lastActivityAt).getTime() < stallThreshold)
     .sort((a, b) => new Date(a.lastActivityAt) - new Date(b.lastActivityAt))
     .slice(0, 6)
@@ -601,6 +668,7 @@ ${text}`,
       const pillarLabel = PILLAR_DISPLAY[p.pillar] || (p.pillar ? p.pillar : 'Unfiled');
       return {
         id: p.id,
+        kind: 'stall',
         proj: `${pillarLabel} · ${p.name}`,
         text: `No work logged in ${days} days.`,
         actions: [
@@ -611,6 +679,7 @@ ${text}`,
       };
     });
 
+  const queueItems = [...checkInItems, ...stallItems];
   const visibleQueue = queueItems.filter(q => !queueResolved[q.id]);
 
   return (
