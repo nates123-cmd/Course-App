@@ -51,6 +51,7 @@ create table course_tasks (
   notes text,
   person_dependency text,
   work_area text,
+  pillar text,
   reminders_uuid text,
   notion_url text,
   day_order int,
@@ -109,6 +110,7 @@ create index course_projects_sort_order_idx on course_projects(sort_order);
 create index course_tasks_project_idx on course_tasks(project_id);
 create index course_tasks_status_idx on course_tasks(status);
 create index course_tasks_do_date_idx on course_tasks(do_date);
+create index course_tasks_pillar_idx on course_tasks(pillar);
 create index course_captures_status_idx on course_captures(status);
 create index course_pulses_date_idx on course_pulses(date desc);
 create index course_reviews_week_idx on course_reviews(week_of desc);

@@ -63,6 +63,23 @@
     rest, edge,
   };
 
+  // Shape a single course_tasks row into the task shape the components read.
+  function shapeTask(t) {
+    return {
+      id: t.id, label: t.title,
+      done: t.status === 'done',
+      next: t.status === 'next',
+      waiting: t.status === 'waiting' ? (t.person_dependency || true) : undefined,
+      due: t.do_date || undefined,
+      effort: t.effort,
+      workType: t.work_type,
+      notes: t.notes,
+      rawStatus: t.status,
+      notionUrl: t.notion_url || null,
+      pillar: (t.pillar || '').toLowerCase() || null,
+    };
+  }
+
   // Shape a Supabase course_projects row + its related rows into the
   // registry shape the prototype's Triage/Project components expect.
   // Fields without a Supabase equivalent yet (latest synthesis, stamp,
@@ -97,18 +114,7 @@
         sub: m.target_date || undefined,
       })),
       notionUrl: p.notion_url || null,
-      initialTasks: (tasksById[p.id] || []).map((t) => ({
-        id: t.id, label: t.title,
-        done: t.status === 'done',
-        next: t.status === 'next',
-        waiting: t.status === 'waiting' ? (t.person_dependency || true) : undefined,
-        due: t.do_date || undefined,
-        effort: t.effort,
-        workType: t.work_type,
-        notes: t.notes,
-        rawStatus: t.status,
-        notionUrl: t.notion_url || null,
-      })),
+      initialTasks: (tasksById[p.id] || []).map(shapeTask),
     };
   }
 
@@ -122,7 +128,17 @@
     ]);
 
     const tasksById = {}, notesById = {}, milestonesById = {};
-    for (const t of tasks)      (tasksById[t.project_id]      ||= []).push(t);
+    // Project-less tasks that carry a pillar are "pillar tasks" — loose work
+    // filed to a life domain but not a project. Grouped by lowercase pillar id
+    // so they line up with the project grouping in Triage.
+    const pillarTasks = {};
+    for (const t of tasks) {
+      if (t.project_id) {
+        (tasksById[t.project_id] ||= []).push(t);
+      } else if ((t.pillar || '').trim()) {
+        (pillarTasks[t.pillar.toLowerCase()] ||= []).push(shapeTask(t));
+      }
+    }
     for (const n of notes)      (notesById[n.project_id]      ||= []).push(n);
     for (const m of milestones) (milestonesById[m.project_id] ||= []).push(m);
 
@@ -132,6 +148,7 @@
     }
     return {
       registry,
+      pillarTasks,
       projectIds: projects.map((p) => p.id),
       pendingInboxCount: pendingCaptures.length,
     };

@@ -190,8 +190,9 @@ function App() {
   // window.PROJECTS is the registry the components read from.
   const reloadData = React.useCallback(async () => {
     try {
-      const { registry, projectIds: ids, pendingInboxCount: count } = await window.loadCourseData();
+      const { registry, pillarTasks, projectIds: ids, pendingInboxCount: count } = await window.loadCourseData();
       window.PROJECTS = registry;
+      window.PILLAR_TASKS = pillarTasks || {};
       setProjectIds(ids);
       setPendingInboxCount(count || 0);
       setOpenProjectId((cur) => cur || ids[0] || null);

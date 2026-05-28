@@ -34,7 +34,10 @@ function CaptureSheet({ kind, initialText, aiClassified, suggestedProjectId, onC
 
   const [draft, setDraft] = React.useState(() => {
     if (kind === 'project') return { name: initialText, pillar: 'arrow', dod: '', due: null };
-    if (kind === 'task')    return { label: initialText, projectId: initialProject, status: 'todo', date: null, estimate: null, workType: null };
+    if (kind === 'task') {
+      const proj = initialProject && window.PROJECTS ? window.PROJECTS[initialProject] : null;
+      return { label: initialText, projectId: initialProject, pillar: proj ? (proj.pillar || null) : null, status: 'todo', date: null, estimate: null, workType: null };
+    }
     return { text: initialText, pillar: null, projectId: suggestedProjectId || null }; // note
   });
   const [calOpen, setCalOpen] = React.useState(false);
@@ -77,7 +80,12 @@ Return ONLY JSON: { "projectId": "<uuid>" | null }`,
         const m = raw.match(/\{[\s\S]*\}/);
         const parsed = JSON.parse(m ? m[0] : raw);
         if (parsed && parsed.projectId && window.PROJECTS[parsed.projectId]) {
-          setDraft((d) => ({ ...d, projectId: parsed.projectId }));
+          const gp = window.PROJECTS[parsed.projectId];
+          setDraft((d) => ({
+            ...d,
+            projectId: parsed.projectId,
+            ...(kind === 'task' ? { pillar: gp.pillar || null } : {}),
+          }));
         }
       } catch (_) {}
     }).catch(() => {})
@@ -229,8 +237,11 @@ Return ONLY JSON: { "projectId": "<uuid>" | null }`,
                       <Icon.Sparkle />
                       <span style={{ marginLeft: 6, color: 'var(--text-faint)' }}>Guessing…</span>
                     </>
-                  ) : <span style={{ color: 'var(--text-faint)' }}>Pick a project</span>}
+                  ) : <span style={{ color: 'var(--text-faint)' }}>None — file to pillar</span>}
                 </span>
+                {draft.projectId && (
+                  <span className="sheet-chip-clear" onClick={() => setDraft(d => ({ ...d, projectId: null }))}>×</span>
+                )}
               </div>
               {projPickerOpen && (
                 <div className="sheet-projects">
@@ -238,7 +249,7 @@ Return ONLY JSON: { "projectId": "<uuid>" | null }`,
                     <div
                       className={`sheet-project-row ${draft.projectId === p.id ? 'sel' : ''}`}
                       key={p.id}
-                      onClick={() => { setDraft(d => ({ ...d, projectId: p.id })); setProjPickerOpen(false); }}
+                      onClick={() => { setDraft(d => ({ ...d, projectId: p.id, pillar: p.pillar || null })); setProjPickerOpen(false); }}
                     >
                       <PillarDot pillar={p.pillar} size={6} />
                       <span className="sheet-project-name">{p.name}</span>
@@ -247,6 +258,25 @@ Return ONLY JSON: { "projectId": "<uuid>" | null }`,
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="sheet-row">
+              <span className="sheet-row-label">Pillar</span>
+              <div className="sheet-segs sheet-segs-3">
+                {PILLARS.map(p => (
+                  <span
+                    key={p.id}
+                    className={`sheet-seg ${draft.pillar === p.id ? 'on' : ''}`}
+                    onClick={() => setDraft(d => d.pillar === p.id
+                      ? { ...d, pillar: null }
+                      : { ...d, pillar: p.id, projectId: null })}
+                  >
+                    <PillarDot pillar={p.id} size={6} />
+                    <span style={{ marginLeft: 5 }}>{p.label}</span>
+                  </span>
+                ))}
+              </div>
+              <div className="sheet-row-hint">Pick a project or a pillar — choosing a pillar clears the project</div>
             </div>
 
             <div className="sheet-row">

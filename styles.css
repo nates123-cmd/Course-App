@@ -1690,6 +1690,19 @@ body {
   color: var(--text-faint);
 }
 
+/* Loose pillar-level tasks (project-less, filed to a pillar) — rendered as a
+   light card at the bottom of each pillar section. */
+.pillar-tasks {
+  background: var(--bg-elevated);
+  border-radius: var(--r-card);
+  padding: 6px var(--card-pad-x);
+  display: flex; flex-direction: column;
+  gap: 1px;
+}
+.pillar-tasks .task { padding: 7px 0; }
+.pillar-tasks .add-task { padding: 8px 0; }
+.pillar-tasks .add-task:hover { background: transparent; color: var(--text-muted); }
+
 /* Project reorder (long-press drag in Triage's active list). */
 .proj-active-list { touch-action: pan-y; }
 .proj-active-list .proj { cursor: grab; }

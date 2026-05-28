@@ -8,6 +8,12 @@ Course was rebuilt into a tighter **Triage + Project** model (started 2026-05-25
 
 The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from the V1 build are NOT in the new design. Open question whether any return in V2; for now Triage + Project carry the whole flow.
 
+## Recent work (2026-05-28 session)
+
+- **Loose pillar tasks in Triage.** Project-less tasks that carry a `pillar` now render in a "Tasks" card at the bottom of their pillar section (open only; done/dropped filtered out). Pillars that have only loose tasks (no projects) still get a section. Inline "+ Add task" appears in that card when ≥1 loose task exists; the FAB capture flow is the path for the first one.
+- **Task → pillar OR project at capture.** The New-task sheet gained a Pillar segmented row. Picking a project auto-fills its pillar; picking a pillar clears the project (mutually exclusive). Project chip now shows "None — file to pillar" and has a clear ×. Saved tasks write `course_tasks.pillar` (only when no project).
+- **`course_tasks.pillar`** — column already existed in the live DB but was missing from `schema.sql`; now synced + indexed (`migrations/2026-05-28_task_pillar.sql`). Pillar values are stored lowercase by the app and normalized to lowercase on read, so capitalized legacy values (`Sunny`, `Life`) still group correctly. SW bumped to `course-v25`.
+
 ## Recent commits (2026-05-27 session)
 
 - **`142dab3`** — Fix project-switch leaking previous project's tasks/state. `usePersistedState` only reads localStorage on mount; switching projects kept the previous project's `tasks`/`dod`/`riff`/`dueDate`/`status` in state and the write-back effect was overwriting the new project's localStorage with the stale values. Remounting via `key={openProjectId}` on `<Project>` forces every initializer to re-read the correct project's keys. *Existing data may be corrupted from prior switches — keys `course-v2:project.<id>.tasks` etc.; `course_projects.outcome` in Supabase may also be wrong.*
@@ -27,7 +33,7 @@ The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from t
 
 | Surface | Purpose | Notes |
 |---------|---------|-------|
-| **Triage** | Pillar-by-pillar board of active projects + ideas + on-hold; capture sheet; queue of pending decisions for stalled projects | Long-press-drag reorder of active projects within each pillar |
+| **Triage** | Pillar-by-pillar board of active projects + ideas + on-hold + loose pillar tasks; capture sheet; queue of pending decisions for stalled projects | Long-press-drag reorder of active projects within each pillar; loose (project-less, pillar-tagged) tasks render at the bottom of each pillar |
 | **Project** | Full project record — name, status, pillar, due, DoD, milestones, tasks, riff → AI proposal pipeline, status notes, next moves (Claude) | Completed tasks hidden behind a toggle; component remounts on projectId change |
 | **Today** | Day-stripe of tasks with `do_date = today` from across projects | Single-column list in the new design |
 | **Capture sheet** | Triage's `+` FAB — quick add of project / task / note (with Claude auto-classify) | Writes to `course_captures` (note) or directly to projects/tasks |
@@ -36,7 +42,7 @@ The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from t
 ## Data shape (current)
 
 - `course_projects` — id, name, outcome (DoD), notes, status, priority, start_date, due_date, completed_date, pillar, work_area, goal_id, notion_url, progress_pct, created_at, updated_at, last_activity_at, **`sort_order`** (added 2026-05-27)
-- `course_tasks` — id, project_id, title, status, do_date, completed_date, effort, work_type, type, notes, person_dependency, work_area, pillar, notion_url, day_order, reschedule_count
+- `course_tasks` — id, project_id, title, status, do_date, completed_date, effort, work_type, type, notes, person_dependency, work_area, **`pillar`** (loose tasks filed to a pillar without a project; synced into schema.sql 2026-05-28), notion_url, day_order, reschedule_count
 - `course_status_notes` — id, project_id, body, summary, source, created_at
 - `course_milestones` — id, project_id, label, marker_state, target_date, sort_order
 - `course_captures` — id, body, status (pending|imported|dismissed), pillar (added 2026-05-26)
@@ -45,7 +51,8 @@ The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from t
 
 ## Pick up here
 
-**Unverified after 2026-05-27 session — confirm before doing more:**
+**Unverified — confirm before doing more:**
+- (2026-05-28) Loose pillar tasks + task-to-pillar capture: data-layer grouping was verified against live data (a `pillar=Sunny`, project_id-null, status=next task grouped under the `sunny` section and a done one was filtered out). The **UI was not visually clicked through** — confirm the "Tasks" card renders at the bottom of a pillar, the inline "+ Add task" commits, and the capture sheet's Pillar/Project mutual-exclusion behaves. There are currently no open loose tasks in the DB, so nothing shows until you create one (FAB → New task → pick a pillar, leave project None).
 - The project-switch state-leak fix (`142dab3`) writes the right localStorage keys now, but prior switches may have **corrupted existing per-project localStorage and `course_projects.outcome` in Supabase**. Spot-check projects you've switched between recently. Affected keys: `course-v2:project.<id>.{tasks,dod,riff,due,milestones,status}`.
 - The PWA had to be force-refreshed twice (close-reopen cycles) to pick up new bundles after the SW bumps. Confirm `course-v24` is the live cache via DevTools `caches.keys()` if anything looks like an old build.
 - The long-press drag UI was wired but not yet tested by the user on mobile. Risks: drag glitches if Triage re-renders mid-drag (Sortable instances are destroyed/recreated on every Triage render — fine in theory but unverified under load). If you see "lift then snap back" or "tap opens project instead of drag," that's where to look.
@@ -76,7 +83,7 @@ The ritual surfaces (Morning Pulse, Monday Open, Friday Close, Dashboard) from t
 - `supabase-client.js` — REST wrapper + `loadCourseData` shaping function
 - `claude-shim.js` — direct Claude API calls
 - `notion-writeback.js` — write-through to Notion via the Edge Function proxy
-- `sw.js` — service worker (cache name bumped per deploy; currently `course-v24`)
+- `sw.js` — service worker (cache name bumped per deploy; currently `course-v25`)
 - `styles.css` — design tokens + per-component styles
 - `schema.sql` — source-of-truth schema (mirrors what's in Supabase)
 - `migrations/*.sql` — incremental migrations applied via MCP / dashboard

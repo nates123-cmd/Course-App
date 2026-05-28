@@ -37,6 +37,11 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
         if (t.done) map[t.id] = true;
       }
     }
+    for (const arr of Object.values(window.PILLAR_TASKS || {})) {
+      for (const t of arr) {
+        if (t.done) map[t.id] = true;
+      }
+    }
     return map;
   };
   const [taskDone, setTaskDone] = useState(deriveTaskDone);
@@ -63,6 +68,20 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
       if (reloadData) await reloadData();
     } catch (err) {
       console.error('New idea insert failed', err);
+    }
+  };
+  const [addingTaskFor, setAddingTaskFor] = useState(null); // pillar id
+  const [newTaskText, setNewTaskText] = useState('');
+  const commitNewTask = async (pillarId) => {
+    const v = newTaskText.trim();
+    setAddingTaskFor(null);
+    setNewTaskText('');
+    if (!v) return;
+    try {
+      await window.db.insert('course_tasks', { title: v, pillar: pillarId, status: 'next' });
+      if (reloadData) await reloadData();
+    } catch (err) {
+      console.error('New pillar task insert failed', err);
     }
   };
   const toastTimerRef = React.useRef(null);
@@ -212,6 +231,7 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
         const inserted = await window.db.insert('course_tasks', {
           title: draft.label.trim(),
           project_id: draft.projectId || null,
+          pillar: draft.projectId ? null : (draft.pillar || null),
           status: taskStatus,
           do_date: taskDoDate,
           effort: draft.estimate ? `${draft.estimate}m`.replace('60m', '1h') : null,
@@ -350,11 +370,17 @@ ${text}`,
       console.error('Task update failed', err);
       setTaskDone(s => ({ ...s, [id]: !next })); // revert optimistic
     });
-    // Best-effort Notion mirror — find task across projects.
+    // Best-effort Notion mirror — find task across projects, then pillar tasks.
     let taskNotionUrl = null;
     for (const p of Object.values(window.PROJECTS || {})) {
       const t = (p.initialTasks || []).find((x) => x.id === id);
       if (t) { taskNotionUrl = t.notionUrl; break; }
+    }
+    if (!taskNotionUrl) {
+      for (const arr of Object.values(window.PILLAR_TASKS || {})) {
+        const t = arr.find((x) => x.id === id);
+        if (t) { taskNotionUrl = t.notionUrl; break; }
+      }
     }
     if (taskNotionUrl && window.notionWriteback) {
       window.notionWriteback.taskStatus(taskNotionUrl, next ? 'done' : 'next');
@@ -506,6 +532,18 @@ ${text}`,
             const pid = p.pillar || 'unfiled';
             const g = grouped[pid] || (grouped[pid] = { active: [], onhold: [], idea: [] });
             g[bucket].push(p);
+          }
+
+          // Loose pillar tasks (project-less, pillar-tagged). Group them so they
+          // render at the bottom of each pillar; pillars that have only loose
+          // tasks (no projects) still get a section.
+          const pillarTasksMap = window.PILLAR_TASKS || {};
+          const openPillarTasksFor = (pid) =>
+            (pillarTasksMap[pid] || []).filter((t) => !t.done && t.rawStatus !== 'dropped');
+          for (const pid of Object.keys(pillarTasksMap)) {
+            if (openPillarTasksFor(pid).length > 0 && !grouped[pid]) {
+              grouped[pid] = { active: [], onhold: [], idea: [] };
+            }
           }
 
           // Active projects within each pillar sort by sort_order ascending
@@ -679,6 +717,48 @@ ${text}`,
                       <span>New idea</span>
                     </div>
                   )}
+
+                  {(() => {
+                    const ptasks = openPillarTasksFor(pid);
+                    const adding = addingTaskFor === pid;
+                    if (ptasks.length === 0 && !adding) return null;
+                    return (
+                      <>
+                        {ptasks.length > 0 && <SubLabel right={String(ptasks.length)}>Tasks</SubLabel>}
+                        <div className="pillar-tasks">
+                          {ptasks.map((t) => {
+                            const extra = t.next
+                              ? <span className="next">next</span>
+                              : t.waiting
+                                ? <span className="waiting">waiting{typeof t.waiting === 'string' ? <> · <span className="waiting-who">{t.waiting}</span></> : null}</span>
+                                : null;
+                            return <TaskRow key={t.id} id={t.id} label={t.label} due={t.due} extra={extra} />;
+                          })}
+                          {adding ? (
+                            <div className="add-task adding">
+                              <span className="plus-mini">+</span>
+                              <input
+                                autoFocus
+                                value={newTaskText}
+                                onChange={(e) => setNewTaskText(e.target.value)}
+                                onBlur={() => commitNewTask(pid)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') commitNewTask(pid);
+                                  if (e.key === 'Escape') { setNewTaskText(''); setAddingTaskFor(null); }
+                                }}
+                                placeholder="New task…"
+                              />
+                            </div>
+                          ) : (
+                            <div className="add-task" onClick={() => setAddingTaskFor(pid)}>
+                              <span className="plus-mini">+</span>
+                              <span>Add task</span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             );
