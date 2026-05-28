@@ -377,6 +377,32 @@ body {
   font-weight: 700;
 }
 
+/* Next-action surfacing — collapsed project rows */
+.proj-name { cursor: pointer; }
+.task.urgent .label { font-weight: 600; }
+.task .tdue.urgent { color: var(--risk); font-weight: 700; }
+.proj-noaction {
+  margin-top: 10px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+.proj-expand {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.12s ease;
+}
+.proj-expand:active { transform: scale(0.97); }
+.proj-expand-chev { display: inline-flex; transition: transform 0.15s ease; }
+.proj-expand-chev.open { transform: rotate(90deg); }
+.proj-expand-label { letter-spacing: 0.02em; }
+
 /* ─────────────────────────────────────────
    Inline rule suggestion
    ───────────────────────────────────────── */

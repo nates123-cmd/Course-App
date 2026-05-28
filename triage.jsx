@@ -21,6 +21,48 @@ function bucketFor(status) {
   return 'active'; // active, routine, under_review
 }
 
+// ── Next-action surfacing ───────────────────────────────────────────────
+// See the Next-Action Surfacing spec. A project's row shows only its next
+// action(s); the rest stay behind a disclosure.
+const SA_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Calendar-day delta (local time) from `today` to an ISO yyyy-mm-dd date.
+// Negative = overdue (still urgent). Blank/non-ISO → null (sorts as "no due").
+function saDaysFromToday(iso, today) {
+  if (!iso) return null;
+  const due = new Date(iso + 'T00:00:00');
+  if (isNaN(due.getTime())) return null;
+  const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const d0 = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  return Math.round((d0 - t0) / 86400000);
+}
+function fmtDueShort(iso) {
+  if (!iso) return undefined;
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return undefined;
+  return `${SA_MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+// Resolve which task(s) to surface for a project.
+// `incomplete`: the project's incomplete tasks, in project order.
+// Course tasks expose `.next` (status === 'next') and `.due` (do_date ISO).
+// Returns { state, primary?, secondary?, count } where state is one of
+// 'empty' | 'normal' | 'urgent_single' | 'urgent_double'.
+function surfaceActions(incomplete, today) {
+  if (!incomplete || incomplete.length === 0) return { state: 'empty', count: 0 };
+  const nextCandidate = incomplete.find((t) => t.next) || incomplete[0];
+  const soonest = incomplete
+    .map((t) => ({ t, d: saDaysFromToday(t.due, today) }))
+    .filter((x) => x.d !== null)
+    .sort((a, b) => a.d - b.d)[0];
+  if (soonest && soonest.d <= 3) {
+    const urgent = soonest.t;
+    if (urgent.id === nextCandidate.id) {
+      return { state: 'urgent_single', primary: urgent, count: incomplete.length - 1 };
+    }
+    return { state: 'urgent_double', primary: urgent, secondary: nextCandidate, count: incomplete.length - 2 };
+  }
+  return { state: 'normal', primary: nextCandidate, count: incomplete.length - 1 };
+}
+
 function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCount, onChangeScreen }) {
   const [collapsed, setCollapsed] = usePersistedState('triage.collapsed', { arrow: false, sunny: true, side: true });
   const [ideasOpen, setIdeasOpen] = usePersistedState('triage.ideasOpen', {});
@@ -48,6 +90,10 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
   // Re-derive when the project registry identity changes (after reload).
   React.useEffect(() => { setTaskDone(deriveTaskDone()); }, [window.PROJECTS]);
   const [taskMeta, setTaskMeta] = usePersistedState('triage.taskMeta', {});
+  // Per-project disclosure: collapsed by default, expand reveals the rest of
+  // the open task list beneath the surfaced action(s).
+  const [projExpanded, setProjExpanded] = usePersistedState('triage.projExpanded', {});
+  const toggleProjExpand = (id) => setProjExpanded((s) => ({ ...s, [id]: !s[id] }));
   const [calendarFor, setCalendarFor] = useState(null);
   const [overlay, setOverlay] = useState(null);
   const [sheetTaskId, setSheetTaskId] = useState(null);
@@ -401,13 +447,13 @@ ${text}`,
   };
 
   // Task row helper — clicking the row toggles done. Long-press opens the sheet.
-  const TaskRow = ({ id, label, extra, due }) => {
+  const TaskRow = ({ id, label, extra, due, urgent }) => {
     const meta = taskMeta[id];
     const lp = useLongPress(() => openSheet(id));
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return (
       <div
-        className={`task ${taskDone[id] ? 'done' : ''}`}
+        className={`task ${taskDone[id] ? 'done' : ''} ${urgent ? 'urgent' : ''}`}
         data-task-id={id}
         onClick={(e) => { if (!lp.didFire()) toggleTask(id, e); }}
         {...lp.bind}
@@ -417,8 +463,8 @@ ${text}`,
         {meta?.kind && <span className={`task-kind k-${meta.kind}`}>{meta.kind}</span>}
         {meta?.estimate && <span className="task-est tnum">{meta.estimate}m</span>}
         {meta?.date
-          ? <span className="tdue tnum">{MONTHS[meta.date.m]} {meta.date.d}</span>
-          : due && <span className="tdue tnum">{due}</span>}
+          ? <span className={`tdue tnum ${urgent ? 'urgent' : ''}`}>{MONTHS[meta.date.m]} {meta.date.d}</span>
+          : due && <span className={`tdue tnum ${urgent ? 'urgent' : ''}`}>{due}</span>}
         {extra}
       </div>
     );
@@ -525,6 +571,7 @@ ${text}`,
           // Group live projects (from window.PROJECTS, loaded by App on mount)
           // by pillar, then by Triage bucket within each pillar. Apply local
           // projStatus overrides so the user's in-session moves take effect.
+          const today = new Date();
           const all = Object.values(window.PROJECTS || {});
           const grouped = {}; // { pillarId: { active: [], onhold: [], idea: [] } }
           for (const p of all) {
@@ -571,20 +618,58 @@ ${text}`,
             return ia - ib;
           });
 
-          const renderTaskRows = (proj) => {
-            const open = (proj.initialTasks || []).filter((t) => !t.done).slice(0, 3);
-            if (open.length === 0) return null;
+          // Build a task row, marking the urgent one and tagging next/waiting.
+          const surfacedTaskRow = (t, urgentId) => {
+            const isUrgent = t.id === urgentId;
+            const extra = t.waiting
+              ? <span className="waiting">waiting{typeof t.waiting === 'string' ? <> · <span className="waiting-who">{t.waiting}</span></> : null}</span>
+              : (t.next && !isUrgent)
+                ? <span className="next">next</span>
+                : null;
             return (
-              <div className="tasks">
-                {open.map((t) => {
-                  const extra = t.next
-                    ? <span className="next">next</span>
-                    : t.waiting
-                      ? <span className="waiting">waiting{typeof t.waiting === 'string' ? <> · <span className="waiting-who">{t.waiting}</span></> : null}</span>
-                      : null;
-                  return <TaskRow key={t.id} id={t.id} label={t.label} due={t.due} extra={extra} />;
-                })}
-              </div>
+              <TaskRow
+                key={t.id}
+                id={t.id}
+                label={t.label}
+                due={fmtDueShort(t.due)}
+                urgent={isUrgent}
+                extra={extra}
+              />
+            );
+          };
+
+          // Collapsed task block: surfaced action(s) only, with the rest behind
+          // a disclosure. Expanding keeps the surfaced row(s) at the top and
+          // reveals the remaining open tasks in project order — no re-sort.
+          const renderTaskRows = (proj) => {
+            const open = (proj.initialTasks || []).filter((t) => !t.done); // project order
+            const sa = surfaceActions(open, today);
+            if (sa.state === 'empty') {
+              return <div className="proj-noaction">No next action</div>;
+            }
+            const surfaced = sa.state === 'urgent_double'
+              ? [sa.primary, sa.secondary]
+              : [sa.primary];
+            const urgentId = sa.state.startsWith('urgent') ? sa.primary.id : null;
+            const surfacedIds = new Set(surfaced.map((t) => t.id));
+            const remaining = open.filter((t) => !surfacedIds.has(t.id));
+            const expanded = !!projExpanded[proj.id];
+            return (
+              <>
+                <div className="tasks">
+                  {surfaced.map((t) => surfacedTaskRow(t, urgentId))}
+                  {expanded && remaining.map((t) => surfacedTaskRow(t, urgentId))}
+                </div>
+                {sa.count > 0 && (
+                  <div
+                    className="proj-expand"
+                    onClick={(e) => { e.stopPropagation(); toggleProjExpand(proj.id); }}
+                  >
+                    <span className={`proj-expand-chev ${expanded ? 'open' : ''}`}><Icon.Chevron /></span>
+                    <span className="proj-expand-label tnum">{expanded ? 'Show less' : `+${sa.count}`}</span>
+                  </div>
+                )}
+              </>
             );
           };
 
@@ -600,9 +685,14 @@ ${text}`,
             }).catch((err) => console.error('Quick pillar assign failed', err));
           };
           const renderProjectCard = (proj) => (
-            <div className="proj" key={proj.id} onClick={() => onOpenProject(proj.id)}>
+            <div className="proj" key={proj.id}>
               <div className="proj-head">
-                <span className="proj-name">{proj.name}</span>
+                <span
+                  className="proj-name"
+                  onClick={(e) => { e.stopPropagation(); onOpenProject(proj.id); }}
+                >
+                  {proj.name}
+                </span>
                 {proj.tag && <span className="proj-tag">{proj.tag}</span>}
               </div>
               {renderTaskRows(proj)}
