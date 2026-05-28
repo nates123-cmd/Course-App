@@ -149,6 +149,52 @@ function Triage({ onOpenProject, density, showQueue, reloadData, pendingInboxCou
   // in place, so the new order paints before the Supabase round-trip resolves.
   const [, setReorderTick] = useState(0);
 
+  // Refresh from Notion — header button + pull-to-refresh both run the Notion
+  // pull-sync (~6–7 Notion calls) then re-read Supabase. Deliberate gesture
+  // only; we don't auto-fire it on focus since it writes to shared prod.
+  const [syncing, setSyncing] = useState(false);
+  const syncingRef = React.useRef(false);
+  const runRefresh = React.useCallback(async () => {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    setSyncing(true);
+    try {
+      if (window.notionSync) await window.notionSync.syncProjects({});
+      if (reloadDataRef.current) await reloadDataRef.current();
+    } catch (err) {
+      console.error('Course refresh failed', err);
+    } finally {
+      syncingRef.current = false;
+      setSyncing(false);
+    }
+  }, []);
+
+  // Pull-to-refresh: engage only when the page is scrolled to the very top.
+  // Resistance-damped; releasing past the threshold triggers runRefresh. We
+  // never preventDefault, so native overscroll coexists without jank.
+  const PULL_THRESHOLD = 72;
+  const [pull, setPull] = useState(0);
+  const pullStartRef = React.useRef(null);
+  const pullRef = React.useRef(0);
+  const onTouchStart = (e) => {
+    if (syncingRef.current || e.touches.length !== 1) { pullStartRef.current = null; return; }
+    const atTop = (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+    pullStartRef.current = atTop ? e.touches[0].clientY : null;
+  };
+  const onTouchMove = (e) => {
+    if (pullStartRef.current == null) return;
+    const dy = e.touches[0].clientY - pullStartRef.current;
+    if (dy < -4) { pullStartRef.current = null; pullRef.current = 0; setPull(0); return; }
+    const d = Math.max(0, Math.min(dy * 0.5, 120));
+    pullRef.current = d; setPull(d);
+  };
+  const onTouchEnd = () => {
+    if (pullStartRef.current == null) return;
+    const reached = pullRef.current >= PULL_THRESHOLD;
+    pullStartRef.current = null; pullRef.current = 0; setPull(0);
+    if (reached) runRefresh();
+  };
+
   const persistReorder = React.useCallback(async (pillarId, oldIndex, newIndex) => {
     if (oldIndex === newIndex) return;
     const current = Object.values(window.PROJECTS || {})
@@ -568,7 +614,22 @@ ${text}`,
   const visibleQueue = queueItems.filter(q => !queueResolved[q.id]);
 
   return (
-    <div className="screen" data-screen-label="01 Triage">
+    <div className="screen" data-screen-label="01 Triage"
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+      {(pull > 0 || syncing) && (
+        <div
+          className="pull-refresh"
+          style={{
+            opacity: syncing ? 1 : Math.min(pull / PULL_THRESHOLD, 1),
+            transform: `translateY(${Math.min(syncing ? PULL_THRESHOLD : pull, 100) - 28}px)`,
+          }}
+        >
+          <span
+            className={`pull-icon ${syncing ? 'spinning' : (pull >= PULL_THRESHOLD ? 'ready' : '')}`}
+            style={syncing ? undefined : { transform: `rotate(${Math.min(pull / PULL_THRESHOLD, 1) * 270}deg)` }}
+          ><Icon.Refresh /></span>
+        </div>
+      )}
       <header className="head">
         <div className="head-row">
           <div>
@@ -576,6 +637,7 @@ ${text}`,
             <div className="head-sub">Triage</div>
           </div>
           <div className="head-icons">
+            <button className={`icon-btn ${syncing ? 'spinning' : ''}`} aria-label="Refresh from Notion" onClick={runRefresh} disabled={syncing}><Icon.Refresh /></button>
             <button className="icon-btn" aria-label="Search" onClick={() => setOverlay('search')}><Icon.Search /></button>
             <button className="icon-btn" aria-label="Tasks" onClick={() => setOverlay('inbox')}>
               <Icon.Inbox />
