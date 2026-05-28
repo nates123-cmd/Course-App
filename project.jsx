@@ -22,10 +22,20 @@ function Project({ projectId, onBack, reloadData }) {
     if (window.notionWriteback) window.notionWriteback.projectOutcome(data.notionUrl, v);
   };
 
-  // Tasks (persisted per project)
-  const [tasks, setTasks] = usePersistedState(`project.${projectId}.tasks`, () =>
+  // Tasks are sourced live from Supabase (data.initialTasks, kept fresh by
+  // reloadData) — NOT persisted to localStorage. We seed local state on each
+  // mount (the component remounts on projectId change) and mutate
+  // optimistically; every task mutation also writes Supabase + reloadData so
+  // the next mount re-reads the truth. A localStorage snapshot used to shadow
+  // live data here, which is why Triage and this view could disagree.
+  const [tasks, setTasks] = useState(() =>
     (data.initialTasks || []).map((t, i) => ({ id: t.id || `t${i}`, ...t }))
   );
+  // Drop the legacy per-project task snapshot so it can't shadow live data on
+  // installs that still have one written.
+  React.useEffect(() => {
+    try { localStorage.removeItem(`course-v2:project.${projectId}.tasks`); } catch (e) {}
+  }, [projectId]);
   // Custom milestones (persisted; appended to data.milestones)
   const [customMilestones, setCustomMilestones] = usePersistedState(`project.${projectId}.milestones`, []);
   // Per-milestone dates (keyed by stable id)
@@ -296,6 +306,9 @@ function Project({ projectId, onBack, reloadData }) {
     window.db.update('course_tasks', id, {
       status: next ? 'done' : null, // un-checking returns the task to blank
       completed_date: next ? today : null,
+    }).then(() => {
+      // Keep window.PROJECTS in sync so the next mount re-reads the toggle.
+      if (reloadData) reloadData();
     }).catch((err) => {
       console.error('Task toggle failed', err);
       // Revert optimistic
@@ -343,14 +356,19 @@ function Project({ projectId, onBack, reloadData }) {
   };
 
   const addProposalTasks = () => {
-    const newIds = proposalTasks.map(p => p.id);
-    setTasks(ts => [
-      ...ts,
-      ...proposalTasks.map(p => ({ id: p.id, label: p.label, due: p.due, next: p.next, done: false })),
-    ]);
-    setHighlightIds(newIds);
+    const adding = proposalTasks.map(p => ({ id: p.id, label: p.label, due: p.due, next: p.next, done: false }));
+    setTasks(ts => [...ts, ...adding]);
+    setHighlightIds(adding.map(p => p.id));
     setShowProposal(false);
     setTimeout(() => setHighlightIds([]), 1400);
+    // Persist to Supabase so they survive remount (live data is the source of
+    // truth — local-only tasks would vanish). Mirrors the riff auto-commit.
+    Promise.all(adding.map((t) => window.db.insert('course_tasks', {
+      project_id: projectId,
+      title: t.label,
+      ...(t.next ? { status: 'next' } : {}),
+    }).catch((err) => console.error('Proposal task insert failed', err))))
+      .then(() => { if (reloadData) reloadData(); });
   };
 
   // Add a task from NextMoves (either a Think-It-Through resolution or a tap on a suggested move)
@@ -365,6 +383,13 @@ function Project({ projectId, onBack, reloadData }) {
     setTasks(ts => [...ts, { id, label, done: false, next: opts.tiny }]);
     setHighlightIds([id]);
     setTimeout(() => setHighlightIds([]), 1400);
+    // Persist so it survives remount.
+    window.db.insert('course_tasks', {
+      project_id: projectId,
+      title: label,
+      ...(opts.tiny ? { status: 'next' } : {}),
+    }).then(() => { if (reloadData) reloadData(); })
+      .catch((err) => console.error('Next-move task insert failed', err));
   };
 
   // Long-press a task row → open the TaskSheet for editing.
@@ -478,7 +503,9 @@ function Project({ projectId, onBack, reloadData }) {
     const url = `shortcuts://run-shortcut?name=CourseAddReminder&input=text&text=${encodeURIComponent(input)}`;
     window.location.href = url;
     // Mark task as pushed in Supabase + Notion.
-    window.db.update('course_tasks', id, { status: 'pushed' }).catch((err) => console.error('Push status update failed', err));
+    window.db.update('course_tasks', id, { status: 'pushed' })
+      .then(() => { if (reloadData) reloadData(); })
+      .catch((err) => console.error('Push status update failed', err));
     if (target.notionUrl && window.notionWriteback) {
       window.notionWriteback.taskStatus(target.notionUrl, 'pushed');
     }
@@ -501,11 +528,11 @@ function Project({ projectId, onBack, reloadData }) {
     open.splice(Math.max(0, Math.min(newIndex, open.length)), 0, moved);
     const renumbered = open.map((t, i) => ({ ...t, sortOrder: (i + 1) * 1000 }));
     setTasks([...renumbered, ...done]);
-    renumbered.forEach((t) => {
+    Promise.all(renumbered.map((t) =>
       window.db.update('course_tasks', t.id, { sort_order: t.sortOrder })
-        .catch((err) => console.error('Task reorder persist failed', err));
-    });
-  }, [setTasks]);
+        .catch((err) => console.error('Task reorder persist failed', err))
+    )).then(() => { if (reloadData) reloadData(); });
+  }, [setTasks, reloadData]);
 
   const setTaskSortRef = React.useCallback((el) => {
     if (taskSortableRef.current) {
