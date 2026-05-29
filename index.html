@@ -16,6 +16,20 @@
 <body>
 <div id="root"></div>
 
+<div id="otp-gate" style="position:fixed;inset:0;z-index:99999;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px;text-align:center">
+    <div style="font-size:1.6rem;font-weight:600;color:var(--accent)">Course</div>
+    <p id="otp-msg" style="color:var(--text-muted);font-size:.95rem">Sign in with your email. We'll send you an 8-digit code.</p>
+    <input id="otp-email" type="email" placeholder="you@example.com" autocomplete="email" style="width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg-elevated);color:var(--text);font-size:1rem;outline:none" />
+    <input id="otp-code" type="text" inputmode="numeric" maxlength="8" placeholder="8-digit code" autocomplete="one-time-code" style="display:none;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:10px;background:var(--bg-elevated);color:var(--text);font-size:1rem;outline:none;letter-spacing:4px;text-align:center" />
+    <button id="otp-send" style="width:100%;padding:14px;border:none;border-radius:10px;background:var(--accent);color:#1c1814;font-weight:600;font-size:1rem;cursor:pointer">Email me a code</button>
+    <button id="otp-verify" style="display:none;width:100%;padding:14px;border:none;border-radius:10px;background:var(--accent);color:#1c1814;font-weight:600;font-size:1rem;cursor:pointer">Sign in</button>
+    <button id="otp-back" style="display:none;background:none;border:none;color:var(--text-muted);font-size:.9rem;cursor:pointer">Use a different email</button>
+    <p id="otp-err" style="color:var(--risk);font-size:.85rem;display:none"></p>
+    <p style="color:var(--text-muted);font-size:.78rem">Your data is private to your account.</p>
+  </div>
+</div>
+
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -41,6 +55,9 @@
 <script type="text/babel" src="app.jsx"></script>
 
 <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.hasSession && !window.hasSession()) window.showOtpGate();
+  });
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
