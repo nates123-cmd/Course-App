@@ -94,8 +94,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Editable surfaces still need real text selection + the iOS edit callout. */
-input, textarea, [contenteditable="true"], .selectable {
+/* Editable surfaces + the user's own operational content still need real text
+   selection (and the iOS edit/copy callout). Course owns inline edits, so the
+   user must be able to select task titles, project names, notes, status
+   entries and Notion summaries — not just form fields. When unsure, re-enable. */
+input, textarea, select, [contenteditable], .selectable,
+.label, .proj-title, .drawer-proj-name, .body-text, .sheet-note,
+.status-latest-body, .status-timeline-body, .notion-summary-text {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
