@@ -146,23 +146,141 @@ const ACCENT_OPTIONS = [
 // survives reloads in the deployed PWA. (The dev Tweaks panel only works inside
 // the editor host — it can't open or persist in the shipped app, so localStorage
 // is the real source of truth.)
+//
+// Modes: 'system' (follow OS), 'dark', 'light', and 'solar' — solar switches the
+// applied light/dark palette by the sun (sunrise→light, sunset→dark) using a
+// network-free NOAA approximation + geolocation, ported from Ink. The user's
+// chosen mode lives in course_theme; for solar, the *resolved* palette ('dark'
+// or 'light') is what lands on data-theme.
 const THEME_KEY = 'course_theme';
-function applyTheme(mode) {
-  const m = mode || 'dark';
-  document.documentElement.setAttribute('data-theme', m);
+const SOLAR_DARK_KEY = 'course_solar_dark'; // last-known resolution, read pre-paint
+
+function osDark() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+// Sunrise/sunset (NOAA approximation, pure JS, no network). Returns Date (UTC) or null at poles.
+function sunTimes(date, lat, lng) {
+  const Z = 90.833, D = Math.PI / 180, R = 180 / Math.PI;
+  const Y = date.getUTCFullYear(), Mo = date.getUTCMonth(), Da = date.getUTCDate();
+  const N = Math.floor((Date.UTC(Y, Mo, Da) - Date.UTC(Y, 0, 0)) / 86400000);
+  function calc(rise) {
+    const lngH = lng / 15, t = N + ((rise ? 6 : 18) - lngH) / 24;
+    const M = (0.9856 * t) - 3.289;
+    let L = (M + 1.916 * Math.sin(M * D) + 0.020 * Math.sin(2 * M * D) + 282.634 + 360) % 360;
+    let RA = (R * Math.atan(0.91764 * Math.tan(L * D)) + 360) % 360;
+    RA += (Math.floor(L / 90) * 90 - Math.floor(RA / 90) * 90); RA /= 15;
+    const sinDec = 0.39782 * Math.sin(L * D), cosDec = Math.cos(Math.asin(sinDec));
+    const cosH = (Math.cos(Z * D) - sinDec * Math.sin(lat * D)) / (cosDec * Math.cos(lat * D));
+    if (cosH > 1 || cosH < -1) return null; // sun never rises / never sets
+    let H = (rise ? 360 - R * Math.acos(cosH) : R * Math.acos(cosH)) / 15;
+    let UT = ((H + RA - 0.06571 * t - 6.622) - lngH) % 24; UT = (UT + 24) % 24;
+    return new Date(Date.UTC(Y, Mo, Da) + UT * 3600000);
+  }
+  return { sunrise: calc(true), sunset: calc(false) };
+}
+function getGeo() { try { return JSON.parse(localStorage.getItem('course_geo') || 'null'); } catch (_) { return null; } }
+function requestGeo(cb) {
+  if (!navigator.geolocation) { cb && cb(null); return; }
+  navigator.geolocation.getCurrentPosition(
+    p => { const g = { lat: p.coords.latitude, lng: p.coords.longitude }; localStorage.setItem('course_geo', JSON.stringify(g)); cb && cb(g); },
+    _ => { cb && cb(null); }, { maximumAge: 6 * 3600000, timeout: 8000 });
+}
+// No coordinates (denied/unavailable, or polar day/night): decide by LOCAL clock —
+// dark before 7am or from 7pm. Deliberately NOT osDark(), so solar still tracks
+// day/night with no geo instead of silently mirroring the OS theme.
+function clockFallback() {
+  const now = new Date(), h = now.getHours();
+  const dark = h < 7 || h >= 19;
+  const nx = new Date(now);
+  if (h < 7) nx.setHours(7, 0, 0, 0);
+  else if (h < 19) nx.setHours(19, 0, 0, 0);
+  else { nx.setDate(nx.getDate() + 1); nx.setHours(7, 0, 0, 0); }
+  return { dark, next: nx - now };
+}
+// Solar resolution → {dark, next} (next = ms until the next transition). Gather sun
+// events for yesterday/today/tomorrow and reason from the instants nearest now, since
+// sunTimes() is anchored to the input's UTC date (western longitudes can spill a day).
+function resolveSolar() {
+  const g = getGeo(); if (!g) return clockFallback();
+  const now = new Date(), sunrises = [], sunsets = [];
+  for (const off of [-1, 0, 1]) {
+    const st = sunTimes(new Date(now.getTime() + off * 86400000), g.lat, g.lng);
+    if (st.sunrise) sunrises.push(st.sunrise);
+    if (st.sunset) sunsets.push(st.sunset);
+  }
+  if (!sunrises.length || !sunsets.length) return clockFallback();
+  const lastBefore = arr => arr.filter(t => t <= now).sort((a, b) => b - a)[0] || null;
+  const firstAfter = arr => arr.filter(t => t > now).sort((a, b) => a - b)[0] || null;
+  const lastSunrise = lastBefore(sunrises), lastSunset = lastBefore(sunsets);
+  let dark;
+  if (!lastSunrise) dark = true;
+  else if (!lastSunset) dark = false;
+  else dark = lastSunset > lastSunrise;
+  const next = [firstAfter(sunrises), firstAfter(sunsets)].filter(Boolean).sort((a, b) => a - b)[0];
+  return { dark, next: next ? next - now : null };
+}
+
+function getCourseTheme() {
+  const t = localStorage.getItem(THEME_KEY);
+  return (t === 'light' || t === 'dark' || t === 'system' || t === 'solar') ? t : 'dark';
+}
+
+// Apply the current stored mode to <html data-theme>. Solar resolves to a concrete
+// dark/light palette; system stays "system" so the CSS media query drives it.
+function applyTheme() {
+  const mode = getCourseTheme();
+  let attr;
+  if (mode === 'solar') {
+    const dark = resolveSolar().dark;
+    localStorage.setItem(SOLAR_DARK_KEY, dark ? '1' : '0'); // pre-paint reads this next boot
+    attr = dark ? 'dark' : 'light';
+  } else {
+    attr = mode; // system | dark | light
+  }
+  document.documentElement.setAttribute('data-theme', attr);
+  // Keep browser/status-bar chrome in sync with the resolved palette.
   const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-  const isLight = m === 'light' || (m === 'system' && prefersLight);
+  const isLight = attr === 'light' || (attr === 'system' && prefersLight);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', isLight ? '#f5efe4' : '#1c1814');
+  scheduleSolar();
+  if (mode === 'solar') ensureSolarGeo();
 }
-function getCourseTheme() {
-  return localStorage.getItem(THEME_KEY) || 'dark';
+
+// Request geolocation at most once per load when solar is active but we have no
+// coords yet, so a session already on solar self-heals from the clock fallback.
+let _geoTried = false;
+function ensureSolarGeo() {
+  if (_geoTried || getGeo() || getCourseTheme() !== 'solar') return;
+  _geoTried = true; requestGeo(() => applyTheme());
 }
+let _solarTimer = null;
+function scheduleSolar() {
+  if (_solarTimer) { clearTimeout(_solarTimer); _solarTimer = null; }
+  if (getCourseTheme() !== 'solar') return;
+  const s = resolveSolar();
+  // Re-apply at the next sun event; cap at 6h to re-check (and dodge setTimeout overflow).
+  if (s && s.next != null) _solarTimer = setTimeout(applyTheme, Math.min(s.next + 1000, 6 * 3600000));
+}
+
 window.setCourseTheme = (mode) => {
   localStorage.setItem(THEME_KEY, mode);
-  applyTheme(mode);
+  if (mode === 'solar') _geoTried = false; // re-pick → retry location even if previously denied
+  applyTheme();
   window.dispatchEvent(new CustomEvent('coursethemechange', { detail: mode }));
 };
+
+// Re-resolve on OS palette flip (system mode, or solar's polar/clock fallback),
+// and re-check solar when the tab returns to the foreground (timers throttle while hidden).
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const onFlip = () => { const t = getCourseTheme(); if (t === 'system' || t === 'solar') applyTheme(); };
+  mq.addEventListener ? mq.addEventListener('change', onFlip) : mq.addListener(onFlip);
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && getCourseTheme() === 'solar') applyTheme();
+});
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -227,17 +345,10 @@ function App() {
   }, []);
   React.useEffect(() => { reloadData(); }, [reloadData]);
 
-  // Apply the persisted theme on mount, and re-apply when the OS palette flips
-  // while in "system" mode. localStorage is the source of truth (set via the
-  // Settings sheet → window.setCourseTheme).
-  React.useEffect(() => {
-    applyTheme(getCourseTheme());
-    const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
-    if (!mq) return;
-    const onSystem = () => { if (getCourseTheme() === 'system') applyTheme('system'); };
-    mq.addEventListener ? mq.addEventListener('change', onSystem) : mq.addListener(onSystem);
-    return () => { mq.removeEventListener ? mq.removeEventListener('change', onSystem) : mq.removeListener(onSystem); };
-  }, []);
+  // Apply the persisted theme on mount. localStorage is the source of truth (set
+  // via the Settings sheet → window.setCourseTheme). OS-flip / solar-event /
+  // foreground re-resolution is wired at module scope.
+  React.useEffect(() => { applyTheme(); }, []);
 
   // Apply density via CSS var on documentElement so it cascades into the frame
   React.useEffect(() => {
@@ -304,7 +415,7 @@ function App() {
         <TweakRadio
           label="Mode"
           value={t.theme}
-          options={['system', 'dark', 'light']}
+          options={['system', 'dark', 'light', 'solar']}
           onChange={(v) => { setTweak('theme', v); window.setCourseTheme(v); }}
         />
         <TweakColor

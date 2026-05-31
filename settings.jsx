@@ -69,17 +69,17 @@ function SettingsSheet({ onClose, reloadData }) {
 
         <div className="sheet-row">
           <span className="sheet-row-label">Appearance</span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[['system', 'System'], ['dark', 'Dark'], ['light', 'Light']].map(([val, lbl]) => (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[['system', 'System'], ['dark', 'Dark'], ['light', 'Light'], ['solar', 'Solar']].map(([val, lbl]) => (
               <span
                 key={val}
                 className={`chip ${theme === val ? 'primary' : 'ghost'}`}
                 onClick={() => pickTheme(val)}
-                style={{ flex: 1, justifyContent: 'center', textAlign: 'center' }}
+                style={{ flex: 1, minWidth: 64, justifyContent: 'center', textAlign: 'center' }}
               >{lbl}</span>
             ))}
           </div>
-          <div className="sheet-row-hint">System follows your device light/dark setting.</div>
+          <div className="sheet-row-hint">System follows your device. Solar tracks the sun — light by day, dark after sunset (asks for your location once).</div>
         </div>
 
         <div className="sheet-row">

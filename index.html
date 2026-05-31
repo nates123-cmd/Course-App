@@ -6,11 +6,15 @@
 <meta name="theme-color" content="#1c1814">
 <script>
   // Apply the saved theme before first paint so there's no dark→light flash.
+  // Solar reads its last-known resolution (course_solar_dark); the main script
+  // recomputes from the sun once loaded.
   (function () {
     try {
       var m = localStorage.getItem('course_theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', m);
-      var light = m === 'light' || (m === 'system' && window.matchMedia &&
+      var attr = m;
+      if (m === 'solar') attr = localStorage.getItem('course_solar_dark') === '1' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', attr);
+      var light = attr === 'light' || (attr === 'system' && window.matchMedia &&
         window.matchMedia('(prefers-color-scheme: light)').matches);
       if (light) {
         var meta = document.querySelector('meta[name="theme-color"]');
