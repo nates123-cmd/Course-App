@@ -1,4 +1,4 @@
-const CACHE_NAME = 'course-v34';
+const CACHE_NAME = 'course-v35';
 const STATIC_ASSETS = ['./', './index.html', './manifest.json', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -26,10 +26,12 @@ self.addEventListener('fetch', (event) => {
 
   if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return;
 
-  if (url.hostname.includes('anthropic.com') || url.hostname.includes('supabase.co')) {
-    event.respondWith(fetch(request).catch(() => caches.match(request)));
-    return;
-  }
+  // Bypass the SW for Anthropic + Supabase: let the browser fetch them
+  // directly. The old caches.match fallback was never populated (API responses
+  // aren't cached), so on failure it resolved undefined and respondWith threw
+  // "FetchEvent ... returned response is null". Bypassing lets offline failures
+  // reject natively to the app instead of a manufactured null response.
+  if (url.hostname.includes('anthropic.com') || url.hostname.includes('supabase.co')) return;
 
   // Stale-while-revalidate: serve the cached copy instantly (fast launch,
   // works offline) AND fetch a fresh copy in the background to update the
