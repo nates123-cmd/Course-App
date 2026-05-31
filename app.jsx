@@ -207,7 +207,13 @@ function App() {
 
   // Apply theme to <html> via data-theme attribute so the CSS variables flip
   React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', t.theme || 'system');
+    const mode = t.theme || 'system';
+    document.documentElement.setAttribute('data-theme', mode);
+    // Keep the browser/status-bar chrome in sync with the active palette.
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    const isLight = mode === 'light' || (mode === 'system' && prefersLight);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isLight ? '#f5efe4' : '#1c1814');
   }, [t.theme]);
 
   // Apply density via CSS var on documentElement so it cascades into the frame

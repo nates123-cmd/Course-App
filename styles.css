@@ -17,6 +17,7 @@
   --pillar-arrow: #8aa3c4;
   --pillar-sunny: #d4a86a;
   --pillar-side: #b884c4;
+  --page-bg: #0a0907; /* letterbox behind the frame */
 
   /* density (overridden by tweaks) */
   --density: 1;
@@ -48,6 +49,7 @@
   --pillar-arrow: #4a6388;
   --pillar-sunny: #8a6228;
   --pillar-side: #7a4a8a;
+  --page-bg: #d8cdb8; /* deeper than --bg so the frame edge still reads */
 }
 
 @media (prefers-color-scheme: light) {
@@ -66,6 +68,7 @@
     --pillar-arrow: #4a6388;
     --pillar-sunny: #8a6228;
     --pillar-side: #7a4a8a;
+    --page-bg: #d8cdb8;
   }
 }
 
@@ -77,7 +80,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
-  background: #0a0907;
+  background: var(--page-bg);
   color: var(--text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -215,7 +218,7 @@ input, textarea, [contenteditable="true"], .selectable {
   min-width: 14px; height: 14px;
   padding: 0 4px;
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   font-size: 9px;
   font-weight: 700;
   border-radius: 7px;
@@ -492,7 +495,7 @@ input, textarea, [contenteditable="true"], .selectable {
 .chip:active { transform: scale(0.97); }
 .chip.primary {
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   border-color: var(--accent);
   font-weight: 600;
 }
@@ -741,7 +744,7 @@ input, textarea, [contenteditable="true"], .selectable {
   width: 36px; height: 36px;
   border-radius: 50%;
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   border: none;
   font-size: 18px;
   font-weight: 600;
@@ -796,7 +799,7 @@ input, textarea, [contenteditable="true"], .selectable {
   width: 56px; height: 56px;
   border-radius: 50%;
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   border: none;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -1036,7 +1039,7 @@ input, textarea, [contenteditable="true"], .selectable {
 }
 .pill.status-active {
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1429,7 +1432,7 @@ input, textarea, [contenteditable="true"], .selectable {
 .cal-day:hover { background: var(--bg-nested); }
 .cal-day.sel {
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   font-weight: 700;
 }
 .pill.pillar-pill {
@@ -1888,7 +1891,7 @@ input, textarea, [contenteditable="true"], .selectable {
   padding: 7px 14px;
   border-radius: 8px;
   background: var(--accent);
-  color: #1c1814;
+  color: var(--bg);
   border: none;
   cursor: pointer;
   transition: transform 0.12s ease, filter 0.15s ease;
