@@ -7,7 +7,13 @@ function SettingsSheet({ onClose, reloadData }) {
   const [projDb, setProjDb]       = React.useState(() => localStorage.getItem('notion_projects_db_id') || '');
   const [tasksDb, setTasksDb]     = React.useState(() => localStorage.getItem('notion_tasks_db_id') || '');
   const [showKey, setShowKey]     = React.useState(false);
+  const [theme, setTheme]         = React.useState(() => localStorage.getItem('course_theme') || 'dark');
   const [savedField, setSavedField] = React.useState(null);
+
+  const pickTheme = (mode) => {
+    setTheme(mode);
+    if (window.setCourseTheme) window.setCourseTheme(mode);
+  };
   const [syncState, setSyncState] = React.useState('idle'); // 'idle' | 'running' | 'done' | 'error'
   const [syncMsg, setSyncMsg]     = React.useState(null);
 
@@ -59,6 +65,21 @@ function SettingsSheet({ onClose, reloadData }) {
 
         <div className="capture-sheet-title">
           <span className="capture-sheet-kind">Settings</span>
+        </div>
+
+        <div className="sheet-row">
+          <span className="sheet-row-label">Appearance</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[['system', 'System'], ['dark', 'Dark'], ['light', 'Light']].map(([val, lbl]) => (
+              <span
+                key={val}
+                className={`chip ${theme === val ? 'primary' : 'ghost'}`}
+                onClick={() => pickTheme(val)}
+                style={{ flex: 1, justifyContent: 'center', textAlign: 'center' }}
+              >{lbl}</span>
+            ))}
+          </div>
+          <div className="sheet-row-hint">System follows your device light/dark setting.</div>
         </div>
 
         <div className="sheet-row">

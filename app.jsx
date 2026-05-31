@@ -142,6 +142,28 @@ const ACCENT_OPTIONS = [
   "#b88a55"  // sandy gold
 ];
 
+// Theme is applied straight to the DOM and persisted in localStorage so it
+// survives reloads in the deployed PWA. (The dev Tweaks panel only works inside
+// the editor host — it can't open or persist in the shipped app, so localStorage
+// is the real source of truth.)
+const THEME_KEY = 'course_theme';
+function applyTheme(mode) {
+  const m = mode || 'dark';
+  document.documentElement.setAttribute('data-theme', m);
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  const isLight = m === 'light' || (m === 'system' && prefersLight);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', isLight ? '#f5efe4' : '#1c1814');
+}
+function getCourseTheme() {
+  return localStorage.getItem(THEME_KEY) || 'dark';
+}
+window.setCourseTheme = (mode) => {
+  localStorage.setItem(THEME_KEY, mode);
+  applyTheme(mode);
+  window.dispatchEvent(new CustomEvent('coursethemechange', { detail: mode }));
+};
+
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [screen, setScreen] = React.useState('triage'); // 'triage' | 'project'
@@ -205,16 +227,17 @@ function App() {
   }, []);
   React.useEffect(() => { reloadData(); }, [reloadData]);
 
-  // Apply theme to <html> via data-theme attribute so the CSS variables flip
+  // Apply the persisted theme on mount, and re-apply when the OS palette flips
+  // while in "system" mode. localStorage is the source of truth (set via the
+  // Settings sheet → window.setCourseTheme).
   React.useEffect(() => {
-    const mode = t.theme || 'system';
-    document.documentElement.setAttribute('data-theme', mode);
-    // Keep the browser/status-bar chrome in sync with the active palette.
-    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    const isLight = mode === 'light' || (mode === 'system' && prefersLight);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', isLight ? '#f5efe4' : '#1c1814');
-  }, [t.theme]);
+    applyTheme(getCourseTheme());
+    const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+    if (!mq) return;
+    const onSystem = () => { if (getCourseTheme() === 'system') applyTheme('system'); };
+    mq.addEventListener ? mq.addEventListener('change', onSystem) : mq.addListener(onSystem);
+    return () => { mq.removeEventListener ? mq.removeEventListener('change', onSystem) : mq.removeListener(onSystem); };
+  }, []);
 
   // Apply density via CSS var on documentElement so it cascades into the frame
   React.useEffect(() => {
@@ -282,7 +305,7 @@ function App() {
           label="Mode"
           value={t.theme}
           options={['system', 'dark', 'light']}
-          onChange={(v) => setTweak('theme', v)}
+          onChange={(v) => { setTweak('theme', v); window.setCourseTheme(v); }}
         />
         <TweakColor
           label="Accent"
