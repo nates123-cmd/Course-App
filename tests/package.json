@@ -1,0 +1,15 @@
+{
+  "name": "course-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Playwright QA harness for the Course PWA (additive — does not touch the app).",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
