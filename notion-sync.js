@@ -78,7 +78,8 @@
       try {
         await edge({ action: 'query_db', database_id: id, page_size: 1 });
         if (dashless(localStorage.getItem('notion_projects_db_id')) !== id) {
-          localStorage.setItem('notion_projects_db_id', id);
+          if (window.suiteSettings) window.suiteSettings.set('notion_projects_db_id', id);
+          else localStorage.setItem('notion_projects_db_id', id);
           report && report(`Using Projects DB ${id.slice(0, 8)}…`);
         }
         return id;

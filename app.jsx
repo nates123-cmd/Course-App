@@ -330,6 +330,9 @@ function App() {
   // window.PROJECTS is the registry the components read from.
   const reloadData = React.useCallback(async () => {
     try {
+      // Pull this user's cloud settings (Notion DB ids, theme) into localStorage
+      // before loading data, so settings follow the login across devices.
+      if (window.suiteSettings) { await window.suiteSettings.load(); applyTheme(); }
       const { registry, pillarTasks, projectIds: ids, pendingInboxCount: count } = await window.loadCourseData();
       window.PROJECTS = registry;
       window.PILLAR_TASKS = pillarTasks || {};

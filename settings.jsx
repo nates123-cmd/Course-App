@@ -1,18 +1,19 @@
-// Settings — manage API key + Notion DB ids without leaving Course.
-// Each field reads/writes localStorage on blur. Bottom-sheet pattern, reuses
-// .sheet-overlay/.sheet styles.
+// Settings — manage Notion DB ids + theme without leaving Course.
+// Synced settings are tied to your login (Supabase user_settings) via
+// window.suiteSettings, with localStorage as the offline mirror. The Anthropic
+// key is no longer entered here — it lives server-side in the `claude` edge
+// function (see claude-shim.js). Bottom-sheet pattern, reuses .sheet styles.
 
 function SettingsSheet({ onClose, reloadData }) {
-  const [anthKey, setAnthKey]     = React.useState(() => localStorage.getItem('anthropic_api_key') || '');
   const [projDb, setProjDb]       = React.useState(() => localStorage.getItem('notion_projects_db_id') || '');
   const [tasksDb, setTasksDb]     = React.useState(() => localStorage.getItem('notion_tasks_db_id') || '');
-  const [showKey, setShowKey]     = React.useState(false);
   const [theme, setTheme]         = React.useState(() => localStorage.getItem('course_theme') || 'dark');
   const [savedField, setSavedField] = React.useState(null);
 
   const pickTheme = (mode) => {
     setTheme(mode);
     if (window.setCourseTheme) window.setCourseTheme(mode);
+    if (window.suiteSettings) window.suiteSettings.set('course_theme', mode);
   };
   const [syncState, setSyncState] = React.useState('idle'); // 'idle' | 'running' | 'done' | 'error'
   const [syncMsg, setSyncMsg]     = React.useState(null);
@@ -47,8 +48,15 @@ function SettingsSheet({ onClose, reloadData }) {
 
   const commit = (key, value, label) => {
     const v = (value || '').trim();
-    if (v) localStorage.setItem(key, v);
-    else   localStorage.removeItem(key);
+    // Synced keys go through suiteSettings (localStorage + the user's cloud row);
+    // anything else stays device-local.
+    if (window.suiteSettings && window.suiteSettings.SYNCED_KEYS.includes(key)) {
+      window.suiteSettings.set(key, v);
+    } else if (v) {
+      localStorage.setItem(key, v);
+    } else {
+      localStorage.removeItem(key);
+    }
     flashSaved(label);
   };
 
@@ -83,27 +91,8 @@ function SettingsSheet({ onClose, reloadData }) {
         </div>
 
         <div className="sheet-row">
-          <span className="sheet-row-label">
-            Anthropic API key
-            {savedField === 'anth' && <span style={{ marginLeft: 8, color: 'var(--good)' }}>saved ✓</span>}
-          </span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              type={showKey ? 'text' : 'password'}
-              className="sheet-label"
-              value={anthKey}
-              onChange={(e) => setAnthKey(e.target.value)}
-              onBlur={() => commit('anthropic_api_key', anthKey, 'anth')}
-              placeholder="sk-ant-…"
-              style={{ flex: 1 }}
-            />
-            <span
-              className="chip ghost"
-              onClick={() => setShowKey((s) => !s)}
-              style={{ flexShrink: 0 }}
-            >{showKey ? 'Hide' : 'Show'}</span>
-          </div>
-          <div className="sheet-row-hint">Powers Capture classification, Riff process, Next Moves.</div>
+          <span className="sheet-row-label">AI</span>
+          <div className="sheet-row-hint">Capture classification, Riff, and Next Moves run through your login — no API key to enter. Powered server-side.</div>
         </div>
 
         <div className="sheet-row">
