@@ -413,16 +413,24 @@ function Project({ projectId, onBack, reloadData }) {
     if (!sheetTaskId) return;
     const id = sheetTaskId;
     setSheetTaskId(null);
-    // Optimistic local update so the row reflects the edit immediately.
+    // Optimistic local update so the row reflects the edit immediately. The row
+    // renders status off `next`/`waiting`/`done` (mirrors shapeTask), so set
+    // those too — updating only `rawStatus` left the status invisible until a
+    // full remount (patch #3fe32eeb).
+    const optimisticStatus = sheetStatusToSchema(draft.status);
     setTasks((ts) => ts.map((t) => t.id === id ? {
       ...t,
       label: draft.label,
-      done: draft.status === 'done',
+      done: optimisticStatus === 'done',
+      next: optimisticStatus === 'next',
+      waiting: optimisticStatus === 'waiting'
+        ? (typeof t.waiting === 'string' ? t.waiting : true)
+        : undefined,
       due: draft.date ? `${draft.date.y}-${String(draft.date.m + 1).padStart(2,'0')}-${String(draft.date.d).padStart(2,'0')}` : undefined,
       effort: draft.estimate ? `${draft.estimate}m`.replace('60m', '1h') : null,
       workType: draft.kind || null,
       notes: draft.note || null,
-      rawStatus: sheetStatusToSchema(draft.status),
+      rawStatus: optimisticStatus,
     } : t));
     const newSchemaStatus = sheetStatusToSchema(draft.status);
     const newIsoDate = dateFromPick(draft.date);
