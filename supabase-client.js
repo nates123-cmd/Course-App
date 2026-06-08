@@ -94,6 +94,10 @@
       headers: { ...(await authHeaders()), ...(init.headers || {}) },
     });
     if (!res.ok) {
+      // 401 = bearer rejected (expired/revoked user token, or anon-key fallback
+      // hitting RLS). Session is dead; clear it and reopen the OTP gate so writes
+      // don't silently fail forever instead of routing back to login.
+      if (res.status === 401) { _setAuthSession(null); showOtpGate(); throw new Error('Session expired — sign in again'); }
       const body = await res.text().catch(() => '');
       throw new Error(`Supabase ${res.status} ${path}: ${body.slice(0, 200)}`);
     }
@@ -108,6 +112,7 @@
       body: JSON.stringify(body || {}),
     });
     if (!res.ok) {
+      if (res.status === 401) { _setAuthSession(null); showOtpGate(); throw new Error('Session expired — sign in again'); }
       const txt = await res.text().catch(() => '');
       throw new Error(`Edge ${fnName} ${res.status}: ${txt.slice(0, 200)}`);
     }
