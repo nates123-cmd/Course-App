@@ -102,17 +102,9 @@ function EmptyState({ onReload }) {
         color: 'var(--text-faint)',
       }}>No projects yet</div>
       <div style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 320, lineHeight: 1.55 }}>
-        Course is where you steer the work. Import projects from Notion to get started, or add one manually.
+        Course is where you steer the work. Add a project to get started.
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-        <button
-          onClick={() => alert('Setup Flow — coming next session. For now, add a project via Supabase Dashboard or wait for the inline editor.')}
-          style={{
-            padding: '10px 16px', borderRadius: 'var(--r-pill)',
-            background: 'var(--accent)', color: '#1c1814', border: 'none',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}
-        >Import from Notion</button>
         <button
           onClick={onReload}
           style={{
